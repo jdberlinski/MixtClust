@@ -16,7 +16,7 @@
 #'   allowed.
 #' @param tol Positive scalar. The desired stopping criterion value.
 #' @param convergence Either \code{"lop"} specifying use of relative change
-#'   in loglikelihood as the convergence criterion, or \code{"aitkens"} specifying 
+#'   in loglikelihood as the convergence criterion, or \code{"aitkens"} specifying
 #'   Aitken's acceleration (default).
 #' @param sigma.constr Logical. Should the dispersion matrices \eqn{\Sigma_k} be
 #'   held constant over \eqn{k = 1,\dots,K} all clusters?
@@ -25,7 +25,7 @@
 #' @param approx.df Logical. If \code{approx.df = TRUE}, a numerical
 #'   approximation of the objective function used to estimate the degrees of
 #'   freedom \eqn{\nu_k} for \eqn{k = 1,\dots,K}.
-#' @param method How should missing entries be handled? Must be either 
+#' @param method How should missing entries be handled? Must be either
 #' \code{"fullEM"} to include missing entries in the EM algorithm following Lin 2009,
 #'  \code{"marginalization"} to integrating out missing entries, or \code{"deletion"}
 #'  to analyze complete cases only.
@@ -33,7 +33,7 @@
 #'   screen?
 #' @param emEM.args A named list of options utilized if \code{initial.values =
 #'   "emEM"} (see details).
-#' @param scaled Logical variable that indicates if computations for multi-dimensional datasets should be done after scaling the dataset. Note that the resulting parameters are scaled back and so should not theoretically have much effect on the performance, except to potentially offer stability in numerical computations. 
+#' @param scaled Logical variable that indicates if computations for multi-dimensional datasets should be done after scaling the dataset. Note that the resulting parameters are scaled back and so should not theoretically have much effect on the performance, except to potentially offer stability in numerical computations.
 #'
 #' @details
 #'
@@ -60,7 +60,7 @@
 #' by \code{tol}) or maximum number of iterations (specified by
 #' \code{max.iter}). If \code{nbest} is greater than one, the long EM run
 #' achieving the largest loglikelihood will be returned.}
-#' 
+#'
 #' Note that because of how the 'marginalization' algorithm is derived, it is
 #' recommended to use em.iter = 1,  this results in the Rnd-EM algorithm of
 #' Maitra (2009) when using 'marginalization'
@@ -69,13 +69,13 @@
 #' @references Emily Goren & Ranjan Maitra, 2021.
 #' "Model-based clustering of partial records," arXiv:2103.16336.
 #' https://arxiv.org/abs/2103.16336
-#' 
+#'
 #' Ranjan Maitra, 2009. "Initializing optimization partitioning algorithms," ACM/IEEE Transactions on Computational Biology and Bioinformatics, 6:1:144–157.
-#' 
+#'
 #' Tsung-I Lin & Hsiu Ho & Pao Shen, 2009. "Computationally
 #' efficient learning of multivariate t mixture models with missing
 #' information," Computational Statistics, 24(3): 375-392.
-#'#' 
+#'#'
 #' @return A list containing: \itemize{ \item{"estimates"}{ A list of the final
 #'   estimates "pi", "nu", "mu", and "Sigma" containing the MLEs for the mixing
 #'   proportions, degrees of freedom, locations, and dispersions, respectively.}
@@ -86,8 +86,8 @@
 #'   cluster \eqn{1, \dots, K} for the \eqn{i}-th observation
 #'   (\eqn{i=1,\dots,n}).} \item{"class"}{ A vector of length \eqn{n} with the
 #'   predicted class memberships for each observation.} \item{"loglik"}{ The
-#'   log likelihood at each (long EM run) iteration.} \item{"loglik"}{The 
-#'   log likelihood at the last iteration, computed for all cases (including 
+#'   log likelihood at each (long EM run) iteration.} \item{"loglik"}{The
+#'   log likelihood at the last iteration, computed for all cases (including
 #'   those with missing values when \code{method = "deletion"})}
 #'   \item{"bic"}{ The BIC for
 #'   the final fitted model.} \item{"EM.time"}{ Runtime for the long EM run(s).}
@@ -111,24 +111,25 @@
 #' BICs <- sapply(ans, function(f) f$bic)
 #' # Plot BIC by K.
 #' plot(BICs ~ Ks, pch = 20, xlab = 'Number of Clusters', ylab = 'BIC')
-#' 
+#'
 #' @author Emily Goren, \email{emily.goren@gmail.com}
 #'
 #' @export
-#' 
-MixtClust <- function(x, 
-                      initial.values = "emEM", 
+#'
+MixtClust <- function(x,
+                      initial.values = "emEM",
                       nclusters = NULL,
-                      max.iter = 1e3, 
-                      tol = 1e-3, 
+                      max.iter = 1e3,
+                      tol = 1e-3,
                       convergence = "aitkens",
                       sigma.constr = FALSE,
+                      sigma.str = "VVV", #TODO: need to document this one
                       df.constr = FALSE,
                       approx.df = TRUE,
                       method = "marginalization",
                       verbose = TRUE,
                       scaled = TRUE,
-                      emEM.args = list(nstarts = sqrt(nclusters*prod(dim(x))), em.iter = 1, nbest = 10)) 
+                      emEM.args = list(nstarts = sqrt(nclusters*prod(dim(x))), em.iter = 1, nbest = 10))
 {
   mf <- match.call(expand.dots = FALSE)
   #######################################################
@@ -144,6 +145,11 @@ MixtClust <- function(x,
     stop("Please supply a positive numeric value for tol")
   if (!is.logical(sigma.constr))
     stop("Please supply a logical value for sigma.constr")
+
+  valid_str <- c("VVV", "EEE")
+  if (!(sigma.str %in% valid_str))
+    stop(paste("Sigma structure must be one of:", paste0(valid_str, collapse = ", ")))
+
   if (!is.logical(df.constr))
     stop("Please supply a logical value for df.constr")
   if (!is.logical(approx.df))
@@ -151,9 +157,9 @@ MixtClust <- function(x,
   if (!(method %in% c("fullEM", "marginalization", "deletion")))
     stop("method must be one of fullEM, marginalization, or deletion")
   marginalization <- ifelse(method == "marginalization", TRUE, FALSE)
-  if (is.null(x)) 
+  if (is.null(x))
     stop('No data was supplied!')
-  
+
   #######################################################
   # Set up data
   #######################################################
@@ -168,7 +174,7 @@ MixtClust <- function(x,
       x <- scale(x, center = FALSE, scale = T)
       v <- attr(x,"scaled:scale")
   }
-  
+
   CC <- (rowSums(R) == 0)
   if (any(bad.rows) & (verbose))
     message(paste("Removing rows with no observations:", which(bad.rows)))
@@ -186,13 +192,14 @@ MixtClust <- function(x,
   A <- matrix(as.numeric(!R), ncol = p, nrow = n)
   ps <- rowSums(A)
   # Set missing values to 0 for cpp code.
+  # NOTE: look into this
   X[R] <- 0
   # Unique patterns of missingness.
   R.unique <- unique(R, MARGIN = 1)
   # Missingness pattern of each observation.
   miss.grp <- apply(R, 1, row_match, R.unique)
   Ru <- 1*!R.unique
-  
+
   #######################################################
   # Initialize
   #######################################################
@@ -210,17 +217,17 @@ MixtClust <- function(x,
       stop("Please provide the number of clusters")
     if (nclusters < 1 | ceiling(nclusters) != nclusters)
       stop("Please provide a positive integer value for the number of clusters")
-    if (verbose) 
+    if (verbose)
       message(paste0('Generating initial values and running short em assuming ', nclusters, ' clusters ...'))
     ptm <- proc.time()
     shortEMest <- rep(list(NA), nstarts)
     shortEMll <- rep(NA, nstarts)
     for (st in 1:nstarts) {
       tmp <- run.em(
-        nclusters, X, 
-        miss.grp, A, R, Ru, ps, 
-        em.iter, sigma.constr, df.constr, marginalization, 
-        init = "smart-random")
+        nclusters, X,
+        miss.grp, A, R, Ru, ps,
+        em.iter, sigma.constr, df.constr, marginalization,
+        init = "smart-random", sigma.str)
       shortEMll[st] <- tmp$loglik
       # save estimates if candidates for nbest logliks
       if (st <= nbest) {
@@ -234,23 +241,23 @@ MixtClust <- function(x,
       }
     }
     em.time <- proc.time() - ptm
-    if (verbose) 
+    if (verbose)
       message(paste0('Determining best ', nbest, ' values from ', nstarts, ' short em runs assuming ', nclusters, ' clusters...'))
     best <- order(shortEMll, decreasing = TRUE)[1:nbest]
     initial.values <- shortEMest[best]
   } else if (initial.values[1] == "kmeans") {
     emEM <- FALSE
     initial.values <- run.em(
-      nclusters, X, 
-      miss.grp, A, R, Ru, ps, em.iter, 
-      sigma.constr, df.constr, 
+      nclusters, X,
+      miss.grp, A, R, Ru, ps, em.iter,
+      sigma.constr, df.constr,
       marginalization, init = "kmeans")
     em.time <- NA
     initial.values <- list(initial.values$estimates)
   } else if (class(initial.values) == 'list') {
     emEM <- FALSE
     # check supplied values
-    if (!(all(names(initial.values) %in% parnames & parnames %in% names(initial.values)))) 
+    if (!(all(names(initial.values) %in% parnames & parnames %in% names(initial.values))))
       stop("initial.values must be a list with named elements 'pi', 'nu', 'mu', and 'Sigma'")
     nclustersold <- nclusters
     nclusters <- length(initial.values$pi)
@@ -279,7 +286,7 @@ MixtClust <- function(x,
     initial.values <- list(get.init.val(X, R, nclusters, df.constr, sigma.constr, "ids", zz))
     em.time <- NA
   }
-  
+
   #######################################################
   # Run long EM
   #######################################################
@@ -289,22 +296,22 @@ MixtClust <- function(x,
   multres <- rep(list(NA), length(initial.values))
   ptm <- proc.time()
   for (i in 1:length(initial.values)) {
-    if (verbose & emEM) 
+    if (verbose & emEM)
       message(paste0('Running long EM from best em runs: ', i, ' of ', nbest, ' total assuming ', nclusters, ' clusters...'))
     multres[[i]] <- run.EM(
-      initial.values[[i]], nclusters, X, 
-      miss.grp, A, Ru, ps, 
+      initial.values[[i]], nclusters, X,
+      miss.grp, A, Ru, ps,
       max.iter, tol, convergence,
-      sigma.constr, df.constr, 
+      sigma.constr, df.constr,
       approx.df, marginalization, npar)
   }
   EM.time <- proc.time() - ptm
-  
+
   #######################################################
-  # Output. 
+  # Output.
   # If more than one long EM run, only return best one.
   #######################################################
-  if (verbose) 
+  if (verbose)
     message(paste0('Finished EM assuming ', nclusters, ' clusters. \n\n'))
   best <- sapply(multres, function(out) tail(out$loglik, n = 1L))
   o <- multres[[which.max(best)]]

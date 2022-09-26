@@ -19,7 +19,7 @@ EM_iter <- function(oldpars, x, A, Ru, miss.grp, ps, sigma.constr, df.constr, ap
         pisnew <- 1
     }
     if (marginalization) {
-        ## update locations 
+        ## update locations
         musnew <- up_mu(x, z, w, A)
     } else {
         K <- ncol(z)
@@ -41,8 +41,8 @@ EM_iter <- function(oldpars, x, A, Ru, miss.grp, ps, sigma.constr, df.constr, ap
     if (marginalization) {
         Sigmasnew <- up_Sigma(x, z, w, musnew, A, sigma.constr)
     } else {
-        Sigmasnew <- sapply(1:K, 
-                            function(k) up_Sigmak_Lin(M, z[,k], w[,k], musnew[k,], oldpars$Sigma[,,k], xhat[[k]], miss.grp, SOiOEOO[[k]]), 
+        Sigmasnew <- sapply(1:K,
+                            function(k) up_Sigmak_Lin(M, z[,k], w[,k], musnew[k,], oldpars$Sigma[,,k], xhat[[k]], miss.grp, SOiOEOO[[k]]),
                             simplify = 'array')
         if (sigma.constr) {
             wtdSigmas <- lapply(1:K, function(k) pisnew[k]*Sigmasnew[,,k])
@@ -57,7 +57,7 @@ EM_iter <- function(oldpars, x, A, Ru, miss.grp, ps, sigma.constr, df.constr, ap
 }
 
 ## Function to generate a set of initial parameter values.
-get.init.val <- function(X, R, K, df.constr, sigma.constr, init = "smart-random", Z = NULL) {
+get.init.val <- function(X, R, K, df.constr, sigma.constr, init = "smart-random", Z = NULL, sigma.str) {
     ##if (df.constr) nus <- rep(runif(1, 5, 25), K) else nus <- runif(K, 5, 25)
     ## Follow teigen: set dfstart to 50
     ##nus <- runif(K, min = 10, max = 50)
@@ -68,10 +68,10 @@ get.init.val <- function(X, R, K, df.constr, sigma.constr, init = "smart-random"
     if (init == "smart-random")
         old.inits <- FALSE else
                                old.inits  <- TRUE
-    
-    if (!old.inits) {    
+
+    if (!old.inits) {
         ## smart random initialization chooses random points in sequence from the dataset with probability inversely proportional to the distance from (the closest of) the previous points. We use the kmmeans with 0 iterations to achieve this. Note that this function can handle missing data and so does not particularly care over missing cases, and can handle them fine.
-        ## because we use pairwise complete observations to calculate the estimates of the Sigmas, it is possible that these are singular. So, instead of checking for stability as we were doing earlier, we simply add a small value to the doagonal (0.001 times the identity matrix) to make the matrix more non-singular). 
+        ## because we use pairwise complete observations to calculate the estimates of the Sigmas, it is possible that these are singular. So, instead of checking for stability as we were doing earlier, we simply add a small value to the doagonal (0.001 times the identity matrix) to make the matrix more non-singular).
         y <- X
         y[R] <- NA # recreate the data matrix with NAs for call to kmmeans
         Sigmas <- array(0, dim=c(p, p, K))
@@ -80,7 +80,7 @@ get.init.val <- function(X, R, K, df.constr, sigma.constr, init = "smart-random"
             pis <- 1
             mus <- matrix(colMeans(y,na.rm=T), nrow = 1)
         } else {
-            ##            sigmas.stab <- F 
+            ##            sigmas.stab <- F
             ##            grand.iter  <- 0
             ##            while ((!sigmas.stab) & (grand.iter < 5)) {
             minnks <- 0
@@ -93,7 +93,7 @@ get.init.val <- function(X, R, K, df.constr, sigma.constr, init = "smart-random"
                 minnks <- min(minks)
                 ## cat("minnks = ", minnks, "\n")
             }
-            
+
             nks <- table(res$partition)
             pis <- nks/n
             mus <- res$centers
@@ -149,7 +149,8 @@ get.init.val <- function(X, R, K, df.constr, sigma.constr, init = "smart-random"
             Sigmas[,,k] <- wtcov$cov
         }
     }
-    if ((K > 1) & sigma.constr) {
+    # if ((K > 1) & sigma.constr) {
+    if ((K > 1) & sigma.str == "EEE") {
         wtdSigmas <- lapply(1:K, function(k) pis[k]*Sigmas[,,k])
         S <- Reduce('+', wtdSigmas)
         for (k in 1:K) Sigmas[,,k] <- S
@@ -195,10 +196,10 @@ run.EM <- function(init, nclusters, X, miss.grp, A, Ru, ps, max.iter, tol, conve
                                         # Final posterior probabilities of cluster membership
     Zs <- up_Z(X, new$mu, new$Sigma, new$nu, new$pi, miss.grp, Ru)
     BIC <- 2*LLs[iter+1] - npar*log(nrow(X))
-    res <- list(estimates = new, 
-                iterations = iter, 
-                Zs = Zs, 
-                loglik = LLs[2:(iter+1)], 
+    res <- list(estimates = new,
+                iterations = iter,
+                Zs = Zs,
+                loglik = LLs[2:(iter+1)],
                 bic = BIC)
 #    print("exiting run.EM")
 #    print(res)
@@ -206,8 +207,8 @@ run.EM <- function(init, nclusters, X, miss.grp, A, Ru, ps, max.iter, tol, conve
 }
 
 ## Run an initialization with short em -- don't keep track of LL, BIC, etc to save time
-run.em <- function(nclusters, X, miss.grp, A, R, Ru, ps, niter, sigma.constr, df.constr, marginalization, init = "uniform") {
-  old <- get.init.val(X, R, nclusters, df.constr, sigma.constr, init)
+run.em <- function(nclusters, X, miss.grp, A, R, Ru, ps, niter, sigma.constr, df.constr, marginalization, init = "uniform", sigma.str) {
+  old <- get.init.val(X, R, nclusters, df.constr, sigma.constr, init, sigma.str = sigma.str)
   iter <- 0
   while (iter <= niter) {
     iter <- iter + 1
@@ -226,7 +227,7 @@ run.em <- function(nclusters, X, miss.grp, A, R, Ru, ps, niter, sigma.constr, df
 are.sigmas.valid <- function(Sigma, eps = 1e-4)
 {
     all(sapply(1:dim(Sigma)[3], function(k) {
-        if ((max(diag(Sigma[,,k])) > eps*0.01)  & (min(diag(Sigma[,,k]) > 0))) 
+        if ((max(diag(Sigma[,,k])) > eps*0.01)  & (min(diag(Sigma[,,k]) > 0)))
             eigen(cov2cor(Sigma[,,k]),symmetric = TRUE, only.values = TRUE)$values[dim(Sigma)[1]] > eps else FALSE
     }))
 }
@@ -285,7 +286,7 @@ loglikelihood <- function(x, ests) {
     miss.grp <- apply(R, 1, row_match, R.unique)
     Ru <- 1*!R.unique
     nclusters <- length(ests$pi)
-    
+
     L <- sapply(1:nclusters, function(k) {ests$pi[k] * h(X, ests$mu[k,], ests$Sigma[,,k], ests$nu[k], miss.grp, Ru)})
     LL <- sum(log(rowSums(L)))
     return(LL)
@@ -299,7 +300,7 @@ loglikelihood <- function(x, ests) {
                                         #    print(length(class(try.h)))
                                         #    if (length(class(try.h)==1)) {
                                         #        if (class(try.h) == "try-error")
-                                        #            browser() 
+                                        #            browser()
                                         #    }  else
                                         #        try.h
                                         #    h(x, mu, Sigma, nu, miss.grp, Ru)
