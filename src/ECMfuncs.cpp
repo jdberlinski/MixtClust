@@ -11,7 +11,7 @@ using namespace Rcpp;
 // [[Rcpp::depends(RcppArmadillo)]]
 // [[Rcpp::depends(RcppGSL)]]
 
-// Make a vector into an array (in Armadillo speak, a cube) 
+// Make a vector into an array (in Armadillo speak, a cube)
 // [[Rcpp::export]]
 arma::cube to_array(NumericVector sigmas, int K, int p) {
   NumericVector vSigmas(sigmas);
@@ -39,7 +39,7 @@ arma::mat fix_var(arma::mat sigma, double tol = 1e-3) {
   if (counter > 0) {
     for (int j=0; j<p; j++) {
       if (failures(j) == 1) {
-        eigval(j) = tol / (counter/p); 
+        eigval(j) = tol / (counter/p);
       }
     }
     ans = eigvec * arma::diagmat(eigval) * eigvec.t();
@@ -72,7 +72,7 @@ arma::mat fix_var(arma::mat sigma, double tol = 1e-3) {
 //' @author Emily Goren, \email{emily.goren@gmail.com}
 //'
 //' @export
-//' 
+//'
 // [[Rcpp::export]]
 arma::vec mahalanobis(arma::mat x, arma::vec mu, arma::mat sigma, bool ischol = false) {
   // Check inputs.
@@ -107,7 +107,7 @@ arma::vec mahalanobis(arma::mat x, arma::vec mu, arma::mat sigma, bool ischol = 
       }
       tmp(j) = ( x(i, j) - mu(j) - s ) / D(j);
     }
-    ans.at(i) = sum(square(tmp)); 
+    ans.at(i) = sum(square(tmp));
   }
   return ans;
 }
@@ -134,7 +134,7 @@ arma::vec mahalanobis(arma::mat x, arma::vec mu, arma::mat sigma, bool ischol = 
 //' @author Emily Goren, \email{emily.goren@gmail.com}
 //'
 //' @export
-//' 
+//'
 // [[Rcpp::export]]
 arma::vec dMVT(arma::mat x, arma::vec mu, arma::mat sigma, double nu, bool logans = false, bool ischol = false) {
   // Check inputs.
@@ -196,7 +196,7 @@ arma::vec dMVT(arma::mat x, arma::vec mu, arma::mat sigma, double nu, bool logan
 //' @author Emily Goren, \email{emily.goren@gmail.com}
 //'
 //' @export
-//' 
+//'
 // [[Rcpp::export]]
 arma::vec h(arma::mat x, arma::vec mu, arma::mat sigma, double nu, arma::vec grp, arma::umat Ru) {
   int n = x.n_rows, M = Ru.n_rows;
@@ -313,28 +313,63 @@ arma::mat up_mu(arma::mat x, arma::mat z, arma::mat w, arma::mat A) {
 
 // CM-step 2: update Sigmas.
 // [[Rcpp::export]]
-arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::mat A, bool constr) {
+arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::mat A, String constr) {
   int p = x.n_cols, n = x.n_rows, K = z.n_cols;
   arma::cube Sigmas(p,p,K);
-  for (int k=0; k<K; k++) {
+
+  if (constr == "VVV" || constr == "EEE") {
+    for (int k=0; k<K; k++) {
+      arma::mat L(p,p); L.zeros();
+      arma::mat R(p,p); R.zeros();
+      for (int i=0; i<n; i++) {
+        arma::mat Ai = arma::diagmat(A.row(i));
+        arma::vec u = x.row(i).t() - mus.row(k).t();
+        L += z(i,k) * w(i,k) * Ai * u * u.t() * Ai;
+        R += z(i,k) * A.row(i).t() * A.row(i);
+      }
+      Sigmas.slice(k) = L / R;
+    }
+    if (constr == "EEE") {
+      arma::vec pis = up_pi(z);
+      arma::mat S(p,p); S.zeros();
+      for (int k=0; k<K; k++) {
+        S += pis(k) * Sigmas.slice(k);
+      }
+      for (int k=0; k<K; k++) {
+        Sigmas.slice(k) = S;
+      }
+    }
+  }
+  else if (constr == "VII") {
+    for (int k = 0; k < K; k++) {
+      arma::mat L(p,p); L.zeros();
+      arma::mat R(p,p); R.zeros();
+      for (int i=0; i<n; i++) {
+        arma::mat Ai = arma::diagmat(A.row(i));
+        arma::vec u = x.row(i).t() - mus.row(k).t();
+        L += z(i,k) * w(i,k) * Ai * u * u.t() * Ai;
+        R += z(i,k) * A.row(i).t() * A.row(i);
+      }
+      arma::mat Iden(p, p, arma::fill::eye);
+      double zeta = arma::trace(L);
+      Sigmas.slice(k) = zeta * Iden / R;
+    }
+  }
+  else if (constr == "EII") {
     arma::mat L(p,p); L.zeros();
     arma::mat R(p,p); R.zeros();
-    for (int i=0; i<n; i++) {
-      arma::mat Ai = arma::diagmat(A.row(i));
-      arma::vec u = x.row(i).t() - mus.row(k).t();
-      L += z(i,k) * w(i,k) * Ai * u * u.t() * Ai;
-      R += z(i,k) * A.row(i).t() * A.row(i);
+    for (int k = 0; k < K; k++) {
+      for (int i=0; i<n; i++) {
+        arma::mat Ai = arma::diagmat(A.row(i));
+        arma::vec u = x.row(i).t() - mus.row(k).t();
+        L += z(i,k) * w(i,k) * Ai * u * u.t() * Ai;
+        R += z(i,k) * A.row(i).t() * A.row(i);
+      }
     }
-    Sigmas.slice(k) = L / R;
-  }
-  if (constr) {
-    arma::vec pis = up_pi(z);
-    arma::mat S(p,p); S.zeros();
-    for (int k=0; k<K; k++) {
-      S += pis(k) * Sigmas.slice(k);
-    }
-    for (int k=0; k<K; k++) {
-      Sigmas.slice(k) = S;
+    arma::mat Iden(p, p, arma::fill::eye);
+    double zeta = arma::trace(L);
+    for (int k = 0; k < K; k++) {
+      Sigmas.slice(k) = zeta * Iden / R;
     }
   }
   return Sigmas;
@@ -356,9 +391,9 @@ double approx_nu(NumericVector z, NumericVector w, double nu, NumericVector ps, 
   return out;
 }
 struct nu_pars {
-  NumericVector z_k; 
-  NumericVector w_k; 
-  double nu_k; 
+  NumericVector z_k;
+  NumericVector w_k;
+  double nu_k;
   NumericVector P;
   int n;
 };
@@ -373,7 +408,7 @@ double objective_nu(double df, void *params) {
   z_k = pars->z_k;
   NumericVector w_k(n);
   w_k = pars->w_k;
-  double zsum = 0, asum = 0; 
+  double zsum = 0, asum = 0;
   for (int i=0; i<n; i++) {
     asum += z_k[i] * (log(w_k[i])-w_k[i]+R::digamma((nu_k+ps[i])/2.0)-log((nu_k+ps[i])/2.0));
     zsum += z_k[i];
@@ -428,11 +463,11 @@ double approx_nu_constr(NumericMatrix z, NumericMatrix w, double nu, NumericVect
 }
 
 struct nu_constr_pars {
-  NumericMatrix z; 
+  NumericMatrix z;
   NumericMatrix w;
-  double nu; 
+  double nu;
   NumericVector P;
-  int K; 
+  int K;
   int n;
 };
 double objective_nu_constr(double df, void *params) {
@@ -487,7 +522,7 @@ double rootsolver_nu_constr(NumericMatrix z, NumericMatrix w, double nu, Numeric
 // [[Rcpp::export]]
 NumericVector up_nu(NumericMatrix z, NumericMatrix w, NumericVector nus, NumericVector ps, bool constr = false, bool approx = false) {
   int n = z.nrow(), K = z.ncol();
-  NumericVector ans(K); 
+  NumericVector ans(K);
   if (constr) {
     double tmp;
     if (approx) {
@@ -526,7 +561,7 @@ NumericVector up_nu(NumericMatrix z, NumericMatrix w, NumericVector nus, Numeric
 
 
 // Code to implement full EM (also including y.NA) per Lin's method
-// For a given k, compute ES'inv(SES')S, 
+// For a given k, compute ES'inv(SES')S,
 // where S is the selection matrix based on the observed indices in D
 // and E is the dispersion of cluster k.
 // [[Rcpp::export]]

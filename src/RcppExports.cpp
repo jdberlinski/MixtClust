@@ -7,6 +7,11 @@
 
 using namespace Rcpp;
 
+#ifdef RCPP_USE_GLOBAL_ROSTREAM
+Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
+Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
+#endif
+
 // to_array
 arma::cube to_array(NumericVector sigmas, int K, int p);
 RcppExport SEXP _MixtClust_to_array(SEXP sigmasSEXP, SEXP KSEXP, SEXP pSEXP) {
@@ -137,7 +142,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // up_Sigma
-arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::mat A, bool constr);
+arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::mat A, String constr);
 RcppExport SEXP _MixtClust_up_Sigma(SEXP xSEXP, SEXP zSEXP, SEXP wSEXP, SEXP musSEXP, SEXP ASEXP, SEXP constrSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -147,7 +152,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< arma::mat >::type w(wSEXP);
     Rcpp::traits::input_parameter< arma::mat >::type mus(musSEXP);
     Rcpp::traits::input_parameter< arma::mat >::type A(ASEXP);
-    Rcpp::traits::input_parameter< bool >::type constr(constrSEXP);
+    Rcpp::traits::input_parameter< String >::type constr(constrSEXP);
     rcpp_result_gen = Rcpp::wrap(up_Sigma(x, z, w, mus, A, constr));
     return rcpp_result_gen;
 END_RCPP

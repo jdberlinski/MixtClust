@@ -31,7 +31,7 @@ fix_var <- function(sigma, tol = 1e-3) {
 #' @author Emily Goren, \email{emily.goren@gmail.com}
 #'
 #' @export
-#' 
+#'
 mahalanobis <- function(x, mu, sigma, ischol = FALSE) {
     .Call(`_MixtClust_mahalanobis`, x, mu, sigma, ischol)
 }
@@ -58,7 +58,7 @@ mahalanobis <- function(x, mu, sigma, ischol = FALSE) {
 #' @author Emily Goren, \email{emily.goren@gmail.com}
 #'
 #' @export
-#' 
+#'
 dMVT <- function(x, mu, sigma, nu, logans = FALSE, ischol = FALSE) {
     .Call(`_MixtClust_dMVT`, x, mu, sigma, nu, logans, ischol)
 }
@@ -89,7 +89,7 @@ dMVT <- function(x, mu, sigma, nu, logans = FALSE, ischol = FALSE) {
 #' @author Emily Goren, \email{emily.goren@gmail.com}
 #'
 #' @export
-#' 
+#'
 h <- function(x, mu, sigma, nu, grp, Ru) {
     .Call(`_MixtClust_h`, x, mu, sigma, nu, grp, Ru)
 }
