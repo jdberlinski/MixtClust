@@ -152,7 +152,7 @@ MixtClust <- function(x,
   if (is.null(x))
     stop('No data was supplied!')
 
-  valid_constr <- c("VVV", "EEE", "VII", "EII")
+  valid_constr <- c("VVV", "EEE", "VII", "EII", "EEI", "VVI", "EVI")
   if (!(sigma.constr %in% valid_constr)) {
     if (is.logical(sigma.constr)) {
       new_constr <- ifelse(sigma.constr, "EEE", "VVV")
@@ -197,7 +197,7 @@ MixtClust <- function(x,
   # Missingness indicator matrix.
   A <- matrix(as.numeric(!R), ncol = p, nrow = n)
   ps <- rowSums(A)
-  # Set missing values to 0 for cpp code.
+  # Set missing values to 0 for cpp code. --------------------------------------
   X[R] <- 0
   # Unique patterns of missingness.
   R.unique <- unique(R, MARGIN = 1)

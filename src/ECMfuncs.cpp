@@ -316,7 +316,6 @@ arma::mat up_mu(arma::mat x, arma::mat z, arma::mat w, arma::mat A) {
 arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::mat A, String constr) {
   int p = x.n_cols, n = x.n_rows, K = z.n_cols;
   arma::cube Sigmas(p,p,K);
-
   if (constr == "VVV" || constr == "EEE") {
     for (int k=0; k<K; k++) {
       arma::mat L(p,p); L.zeros();
@@ -371,6 +370,64 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
     for (int k = 0; k < K; k++) {
       Sigmas.slice(k) = zeta * Iden / R;
     }
+  }
+  else if (constr == "EEI") {
+    arma::mat L(p,p); L.zeros();
+    arma::mat R(p,p); R.zeros();
+    for (int k = 0; k < K; k++) {
+      for (int i=0; i<n; i++) {
+        arma::mat Ai = arma::diagmat(A.row(i));
+        arma::vec u = x.row(i).t() - mus.row(k).t();
+        L += z(i,k) * w(i,k) * Ai * u * u.t() * Ai;
+        R += z(i,k) * A.row(i).t() * A.row(i);
+      }
+    }
+
+    arma::mat Lambda = diagmat(L);
+    for (int k = 0; k < K; k++) {
+      Sigmas.slice(k) = Lambda / n;
+    }
+  }
+  else if (constr == "VVI") {
+    for (int k = 0; k < K; k++) {
+      arma::mat L(p,p); L.zeros();
+      arma::mat R(p,p); R.zeros();
+      for (int i=0; i<n; i++) {
+        arma::mat Ai = arma::diagmat(A.row(i));
+        arma::vec u = x.row(i).t() - mus.row(k).t();
+        L += z(i,k) * w(i,k) * Ai * u * u.t() * Ai;
+        R += z(i,k) * A.row(i).t() * A.row(i);
+      }
+      arma::mat Lambda = diagmat(L);
+      Sigmas.slice(k) = Lambda / R;
+    }
+  }
+  else if (constr == "EVI") {
+    double zeta = 0.0;
+    double detval = 0.0;
+    for (int k = 0; k < K; k++) {
+      arma::mat L(p, p); L.zeros();
+      arma::mat R(p,p); R.zeros();
+      for (int i=0; i<n; i++) {
+        arma::mat Ai = arma::diagmat(A.row(i));
+        arma::vec u = x.row(i).t() - mus.row(k).t();
+        L += z(i,k) * w(i,k) * Ai * u * u.t() * Ai;
+        R += z(i,k) * A.row(i).t() * A.row(i);
+      }
+      arma::mat Lambda = diagmat(L);
+      // TODO: check that p is actually the correct value to use here
+      detval = pow(arma::det(Lambda), 1.0 / p);
+      zeta += detval;
+      Lambda = Lambda / detval;
+
+      // this is the divide by n part of zeta*Lambda
+      Sigmas.slice(k) = Lambda / R;
+    }
+
+    for (int k = 0; k < K; k++) {
+      Sigmas.slice(k) = Sigmas.slice(k) * zeta;
+    }
+
   }
   return Sigmas;
 }
