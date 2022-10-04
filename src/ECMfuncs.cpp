@@ -316,6 +316,11 @@ arma::mat up_mu(arma::mat x, arma::mat z, arma::mat w, arma::mat A) {
 arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::mat A, String constr) {
   int p = x.n_cols, n = x.n_rows, K = z.n_cols;
   arma::cube Sigmas(p,p,K);
+  //TODO: add parameter for maximum iterations for iterative solutions
+  // same with tolerance
+  int iter_max = 100;
+  double tol = 0.01;
+  // constraints with closed form solutions
   if (constr == "VVV" || constr == "EEE") {
     for (int k=0; k<K; k++) {
       arma::mat L(p,p); L.zeros();
@@ -451,6 +456,67 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
 
     for (int k = 0; k < K; k++) {
       Sigmas.slice(k) = Sigmas.slice(k) * zeta;
+    }
+  }
+  // constraints with iterative solutions
+  else if (constr == "VEE") {
+    // first, we initialize the matrix C
+    // using the EEE solution
+    arma::vec zeta(p); zeta.zeros();
+    arma::mat C(p, p); C.zeros();
+    arma::mat L(p,p); L.zeros();
+    arma::mat R(p,p); R.zeros();
+    for (int k=0; k<K; k++) {
+      for (int i=0; i<n; i++) {
+        arma::mat Ai = arma::diagmat(A.row(i));
+        arma::vec u = x.row(i).t() - mus.row(k).t();
+        L += z(i,k) * w(i,k) * Ai * u * u.t() * Ai;
+        R += z(i,k) * A.row(i).t() * A.row(i);
+      }
+    }
+    C = L / R;
+    // start iterative procedure
+    arma::mat W(p, p); W.zeros(); // accumulator for C
+    arma::mat C_old(p, p);
+    arma::vec zeta_old(p);
+    double c_diff = 0;
+    double c_denom = 0;
+    double zeta_diff = 0;
+    double zeta_denom = 0;
+    for (int iter = 0; iter < iter_max; iter++) {
+      // first, find optimal zeta's with respect to C
+      W.zeros();
+      C_old = C;
+      zeta_old = zeta;
+      for (int k = 0; k < K; k++) {
+        L.zeros(); R.zeros();
+        for (int i=0; i<n; i++) {
+          arma::mat Ai = arma::diagmat(A.row(i));
+          arma::vec u = x.row(i).t() - mus.row(k).t();
+          L += z(i,k) * w(i,k) * Ai * u * u.t() * Ai;
+          R += z(i,k) * A.row(i).t() * A.row(i);
+        }
+        // TODO: check that this is the correct thing to do
+        zeta(k) = arma::trace(L * C.i() / R);
+        W += L / zeta(k);
+      }
+      C = W / pow(arma::det(W), 1.0 / p);
+
+      // check termination condition
+      if (iter > 1) {
+        c_diff = arma::accu(arma::square(C_old - C));
+        zeta_diff = arma::accu(arma::square(zeta_old - zeta));
+
+        c_denom = arma::accu(arma::square(C_old));
+        zeta_denom = arma::accu(arma::square(zeta_old));
+
+        if (abs(zeta_diff / zeta_denom - 1) < tol && abs(c_diff / c_denom - 1) < tol) {
+          break;
+        }
+      }
+    }
+    for (int k = 0; k < K; k++) {
+      Sigmas.slice(k) = zeta(k) * C;
     }
   }
   return Sigmas;
