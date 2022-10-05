@@ -152,7 +152,9 @@ MixtClust <- function(x,
   if (is.null(x))
     stop('No data was supplied!')
 
-  valid_constr <- c("VVV", "EEE", "VII", "EII", "EEI", "VVI", "EVI", "EVV", "VEE")
+  valid_constr <- c("VVV", "EEE", "VII", "EII", "EEI", "VVI", "EVI", "EVV", "VEE", "VEV")
+  if (is.character(sigma.constr))
+    sigma.constr <- toupper(sigma.constr)
   if (!(sigma.constr %in% valid_constr)) {
     if (is.logical(sigma.constr)) {
       new_constr <- ifelse(sigma.constr, "EEE", "VVV")
