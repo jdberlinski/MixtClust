@@ -1,4 +1,6 @@
 #define ARMA_DONT_PRINT_ERRORS
+#define ARMA_USE_LAPACK
+#define ARMA_USE_BLAS
 #include <RcppArmadillo.h>
 #include <RcppGSL.h>
 #include <gsl/gsl_roots.h>
@@ -519,79 +521,72 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
       Sigmas.slice(k) = zeta(k) * C;
     }
   }
-  /* else if (constr == "VEV") { */
-  /*   // initialize solution using EEE */
-  /*   Sigmas = up_Sigma(x, z, w, mus, A, constr = "EEE"); */
+  else if (constr == "VEV") {
+    // TODO: nuked this whole thing because of exploding values
+    // initialize solution using EEE
+    Sigmas = up_Sigma(x, z, w, mus, A, constr = "EEE");
+  }
+  else if (constr == "VEI") {
+    // values to be updated
+    // start with identity matrix for Lambda
+    arma::mat Lambda = arma::eye(p, p);
+    arma::vec zeta(K);
 
-  /*   arma::vec zeta(K); zeta.zeros(); */
-  /*   arma::cube Gamma(p, p, K); Gamma.zeros(); */
-  /*   arma::mat Lambda(p, p); Lambda.zeros(); */
-  /*   // the matrix W is needed at every iteration for each of the clusters, so */
-  /*   // should save them as a cube here */
-  /*   arma::cube L(p, p, K); L.zeros(); */
-  /*   arma::cube R(p, p, K); R.zeros(); */
-  /*   for (int k=0; k<K; k++) { */
-  /*     for (int i=0; i<n; i++) { */
-  /*       arma::mat Ai = arma::diagmat(A.row(i)); */
-  /*       arma::vec u = x.row(i).t() - mus.row(k).t(); */
-  /*       L.slice(k) += z(i,k) * w(i,k) * Ai * u * u.t() * Ai; */
-  /*       R.slice(k) += z(i,k) * A.row(i).t() * A.row(i); */
-  /*     } */
-  /*   } */
+    // values to perform calculations with
+    arma::mat W_acc(p, p);
 
-  /*   // initialize Gamma matrices using eigendecompostion of L matrices */
-  /*   arma::cube W_eig(p, p, K); W_eig.zeros(); // columns of each slice are the eigvecs */
-  /*   arma::cube Omega(p, p, K); Omega.zeros(); // diagonal matrices of eigvals */
-  /*   arma::cx_vec eigval(p); // work vector to store eigenvalues */
-  /*   arma::cx_mat eigvec(p, p); */
-  /*   for (int k; k < K; k++) { */
-  /*     arma::eig_gen(eigval, eigvec, L.slice(k)); */
-  /*     Omega.slice(k) = arma::diagmat(eigval); */
-  /*     W_eig.slice(k) = eigvec; */
-  /*     if (k == 1) { */
-  /*       Lambda = Omega.slice(k); */
-  /*     } */
-  /*   } */
-  /*   // start iterative procedure */
-  /*   arma::mat Lambda_accu(p, p); Lambda_accu.zeros(); */
-  /*   arma::vec zeta_old(K); */
-  /*   arma::mat Lambda_old(p, p); Lambda_old.zeros(); */
-  /*   arma::cube Gamma_old(p, p, K); Gamma_old.zeros(); */
-  /*   double g_diff = 0; */
-  /*   double g_denom = 0; */
-  /*   double l_diff = 0; */
-  /*   double l_denom = 0; */
-  /*   double zeta_diff = 0; */
-  /*   double zeta_denom = 0; */
-  /*   for (int iter = 0; iter < iter_max; iter++) { */
+    // values to check termination conditions
+    double zeta_diff, zeta_denom;
+    double lambda_diff, lambda_denom;
+    arma::mat Lambda_old(p, p);
+    arma::vec zeta_old(K);
 
-  /*     for (int k = 0; k < K; k++) { */
-  /*       zeta(k) = arma::trace(L.slice(k) * Gamma.slice(k) * Lambda.i() * Gamma.slice(k).t()); */
-  /*       Gamma.slice(k) = L.slice(k); */
-  /*       Lambda_accu += Omega.slice(k) / zeta(k); */
-  /*     } */
+    // get values for L and R
+    arma::cube L(p, p, K); L.zeros();
+    arma::cube R(p, p, K); R.zeros();
+    for (int k = 0; k < K; k++) {
+      for (int i=0; i<n; i++) {
+        arma::mat Ai = arma::diagmat(A.row(i));
+        arma::vec u = x.row(i).t() - mus.row(k).t();
+        L.slice(k) += z(i,k) * w(i,k) * Ai * u * u.t() * Ai;
+        R.slice(k) += z(i,k) * A.row(i).t() * A.row(i);
+      }
+    }
 
-  /*     Lambda = Lambda_accu / pow(arma::det(Lambda_accu), 1.0 / p); */
+    for (int iter = 0; iter < iter_max; iter++) {
+      W_acc.zeros();
+      Lambda_old = Lambda;
+      zeta_old = zeta;
+      // update values, starting with zeta vector
 
-  /*     // check termination condition */
-  /*     if (iter > 1) { */
-  /*       g_diff = arma::accu(arma::square(Gamma_old - Gamma)); */
-  /*       l_diff = arma::accu(arma::square(Lambda_old - Lambda)); */
-  /*       zeta_diff = arma::accu(arma::square(zeta_old - zeta)); */
+      // important to keep track of the idea that in non-missing cases, zeta
+      // should be divided by (pn_k), but we are using the matrix R, so it
+      // any time a matrix is multiplied by zeta, it should be divided
+      // (element-wise) by R
+      for (int k = 0; k < K; k++) {
+        zeta(k) = arma::trace(L.slice(k) * Lambda.i());
+        W_acc += L.slice(k) / R.slice(k) / zeta(k);
+      }
+      Lambda = arma::diagmat(W_acc) / pow(arma::det(arma::diagmat(W_acc)), 1.0 / p);
 
-  /*       g_denom = arma::accu(arma::square(Gamma_old)); */
-  /*       l_denom = arma::accu(arma::square(Lambda_old)); */
-  /*       zeta_denom = arma::accu(arma::square(zeta_old)); */
+      // check termination condition
+      if (iter > 1) {
+        zeta_diff = arma::accu(arma::square(zeta_old - zeta));
+        lambda_diff = arma::accu(arma::square(Lambda_old - Lambda));
 
-  /*       if (abs(zeta_diff / zeta_denom - 1) < tol && abs(g_diff / g_denom - 1) < tol && abs(l_diff / l_denom - 1) < tol) { */
-  /*         break; */
-  /*       } */
-  /*     } */
-  /*   } */
-  /*   for (int k = 0; k < K; k++) { */
-  /*     Sigmas.slice(k) = zeta(k) * Gamma.slice(k) * Lambda * Gamma.slice(k).t(); */
-  /*   } */
-  /* } */
+        lambda_denom = arma::accu(arma::square(Lambda_old));
+        zeta_denom = arma::accu(arma::square(zeta_old));
+
+        if (abs(zeta_diff / zeta_denom - 1) < tol && abs(lambda_diff / lambda_denom - 1) < tol) {
+          break;
+        }
+      }
+    }
+
+    for (int k = 0; k < K; k++) {
+      Sigmas.slice(k) = Lambda * zeta(k) / R.slice(k);
+    }
+  }
   return Sigmas;
 }
 
