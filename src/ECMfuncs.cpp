@@ -587,6 +587,101 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
       Sigmas.slice(k) = Lambda * zeta(k) / R.slice(k);
     }
   }
+  else if (constr == "EVE") {
+    // get values for L and R
+    arma::cube L(p, p, K); L.zeros();
+    arma::mat R(p, p); R.zeros(); // TODO: may be the case here that we need a cube
+
+    // values to store eigenvalues to be worked with later
+    arma::vec eigval(p);
+    arma::mat eigvec(p, p);
+
+    // vector to store largest eigenvalue for each K
+    arma::vec L_eig(K);
+
+    for (int k = 0; k < K; k++) {
+      for (int i=0; i<n; i++) {
+        arma::mat Ai = arma::diagmat(A.row(i));
+        arma::vec u = x.row(i).t() - mus.row(k).t();
+        L.slice(k) += z(i,k) * w(i,k) * Ai * u * u.t() * Ai;
+        R += z(i,k) * A.row(i).t() * A.row(i);
+      }
+      arma::eig_sym(eigval, eigvec, L.slice(k)); // values are in ascending order
+      L_eig(k) = eigval(p);
+    }
+
+    // initialize lamdba matrices as identity
+    arma::cube Lambda(p, p, K);
+    for (int k; k < K; k++) {
+      Lambda.slice(k).eye();
+    }
+
+    arma::mat Gamma(p, p); Gamma.zeros();
+
+    // matrix for MM iterations (and its svd)
+    arma::mat F(p, p);
+    arma::mat P;
+    arma::mat R;
+    arma::vec b;
+
+    // vector to store largest eigenvalues of lambda matrices
+    arma::vec Lambda_eig(K);
+
+    // working vectors for termination conditions, etc
+    double detval = 0.0;
+
+    // main iteration loop
+    for (int iter; iter < iter_max; iter++) {
+      F.zeros();
+      // there needs to be an inner loop here to solve for Gamma
+      for (int in; in < iter_max; in++) {
+        if (iter % 2 == 0) {
+          for (int k; k < K; k++) {
+            F += Lambda.slice(k).i() * Gamma.t() * L.slice(k) - L_eig(k) * Lambda.slice(k).i() * Gamma.t();
+          }
+          arma::svd(P, b, R, F);
+          Gamma = R * P.t();
+        }
+        else {
+          // we need to find the largest eigenvalue of each Lambda(k);
+          for (int k; k < K; k++) {
+            arma::eig_sym(eigval, eigvec, Lambda.slice(k));
+            Lambda_eig(k) = eigval(p);
+            F += Lambda.slice(k).i() * Gamma.t() * L.slice(k) - Lambda_eig(k) * Lambda.slice(k).i() * Gamma.t();
+          }
+          arma::svd(P, b, R, F);
+          Gamma = R * P.t();
+        }
+
+        // check termination
+        if (in > 1) {
+
+        }
+      }
+      // end of inner loop
+
+      for (int k; k < K; k++) {
+        Lambda.slice(k) = arma::diagmat(Gamma.t() * L.slice(k) * Gamma);
+        detval = arma::det(Lambda.slice(k));
+        Lambda.slice(k) = Lambda.slice(k) / pow(detval, 1.0 / p);
+      }
+
+      // check termination
+      if (iter > 1) {
+
+      }
+    }
+
+    // compute optimal zeta and return resulting matrices
+    double zeta = 0.0;
+    for (int k; k < K; k++) {
+      zeta += arma::trace(Gamma * Lambda.slice(k) * Gamma.t() * L.slice(k));
+    }
+
+    for (int k; k < K; k++) {
+      Sigmas.slice(k) = zeta * Gamma * Lambda.slice(k) * Gamma.t() / R;
+    }
+  }
   return Sigmas;
 }
 
