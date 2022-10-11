@@ -522,7 +522,6 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
     }
   }
   else if (constr == "VEV") {
-    // TODO: nuked this whole thing because of exploding values
     // initialize solution using EEE
     Sigmas = up_Sigma(x, z, w, mus, A, constr = "EEE");
 
@@ -645,7 +644,6 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
     }
   }
   else if (constr == "EVE") {
-    // TODO: values blow up here, only forms one cluster
     // get values for L and R
     arma::cube L(p, p, K); L.zeros();
     arma::mat R(p, p); R.zeros(); // TODO: may be the case here that we need a cube
@@ -713,7 +711,7 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
           for (int k = 0; k < K; k++) {
             arma::eig_sym(eigval, eigvec, Lambda.slice(k));
             Lambda_eig(k) = eigval(p - 1);
-            F += Lambda.slice(k).i() * Gamma.t() * L.slice(k) - Lambda_eig(k) * Lambda.slice(k).i() * Gamma.t();
+            F += L.slice(k) * Gamma * Lambda.slice(k).i() - Lambda_eig(k) * L.slice(k) * Gamma;
           }
           arma::svd(P, b, C, F);
           Gamma = C * P.t();
@@ -759,6 +757,123 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
 
     for (int k = 0; k < K; k++) {
       Sigmas.slice(k) = zeta * Gamma * Lambda.slice(k) * Gamma.t() / R;
+    }
+  }
+  else if (constr == "VVE") {
+    // TODO: something is wrong in this one, only produces two clusters on iris
+    // get values for L and R
+    arma::cube L(p, p, K); L.zeros();
+    arma::cube R(p, p, K); R.zeros();
+
+    // values to store eigenvalues to be worked with later
+    arma::vec eigval(p);
+    arma::mat eigvec(p, p);
+
+    // vector to store largest eigenvalue for each K
+    arma::vec L_eig(K);
+
+    for (int k = 0; k < K; k++) {
+      for (int i=0; i<n; i++) {
+        arma::mat Ai = arma::diagmat(A.row(i));
+        arma::vec u = x.row(i).t() - mus.row(k).t();
+        L.slice(k) += z(i,k) * w(i,k) * Ai * u * u.t() * Ai;
+        R.slice(k) += z(i,k) * A.row(i).t() * A.row(i);
+      }
+      arma::eig_sym(eigval, eigvec, L.slice(k)); // values are in ascending order
+      L_eig(k) = eigval(p - 1);
+    }
+
+    // initialize lamdba matrices as identity
+    arma::cube Lambda(p, p, K);
+    for (int k = 0; k < K; k++) {
+      Lambda.slice(k).eye();
+    }
+
+    arma::mat Gamma(p, p); Gamma.zeros();
+
+    // matrix for MM iterations (and its svd)
+    arma::mat F(p, p);
+    arma::mat P;
+    arma::mat C;
+    arma::vec b;
+
+    // vector to store largest eigenvalues of lambda matrices
+    arma::vec Lambda_eig(K);
+
+    // working vectors for termination conditions, etc
+    double detval = 0.0;
+    arma::mat Gamma_old(p, p);
+    arma::mat Gamma_old2(p, p);
+    arma::cube Lambda_old(p, p, K);
+    double Gamma_diff, Gamma_denom;
+    double Lambda_diff, Lambda_denom;
+
+    // main iteration loop
+    for (int iter = 0; iter < iter_max; iter++) {
+      F.zeros();
+      Gamma_old = Gamma;
+      Lambda_old = Lambda;
+      // there needs to be an inner loop here to solve for Gamma
+      for (int in = 0; in < iter_max; in++) {
+        Gamma_old2 = Gamma;
+        if (iter % 2 == 0) {
+          for (int k = 0; k < K; k++) {
+            F += Lambda.slice(k).i() * Gamma.t() * L.slice(k) - L_eig(k) * Lambda.slice(k).i() * Gamma.t();
+          }
+          arma::svd(P, b, C, F);
+          Gamma = C * P.t();
+        }
+        else {
+          // we need to find the largest eigenvalue of each Lambda(k);
+          for (int k = 0; k < K; k++) {
+            arma::eig_sym(eigval, eigvec, Lambda.slice(k));
+            Lambda_eig(k) = eigval(p - 1);
+            F += L.slice(k) * Gamma * Lambda.slice(k).i() - Lambda_eig(k) * L.slice(k) * Gamma;
+          }
+          arma::svd(P, b, C, F);
+          Gamma = C * P.t();
+        }
+
+        // check termination
+        if (in > 1) {
+          Gamma_diff = arma::accu(arma::square(Gamma_old2 - Gamma));
+          Gamma_denom = arma::accu(arma::square(Gamma_old2));
+
+          if (abs(Gamma_diff / Gamma_denom - 1) < tol) {
+            break;
+          }
+        }
+      }
+      // end of inner loop
+
+      for (int k = 0; k < K; k++) {
+        Lambda.slice(k) = arma::diagmat(Gamma.t() * L.slice(k) * Gamma);
+        detval = arma::det(Lambda.slice(k));
+        Lambda.slice(k) = Lambda.slice(k) / pow(detval, 1.0 / p);
+      }
+
+      // check termination
+      if (iter > 1) {
+        Gamma_diff = arma::accu(arma::square(Gamma_old - Gamma));
+        Gamma_denom = arma::accu(arma::square(Gamma_old));
+
+        Lambda_diff = arma::accu(arma::square(Lambda_old - Lambda));
+        Lambda_denom = arma::accu(arma::square(Lambda_old));
+
+        if (abs(Gamma_diff / Gamma_denom - 1) < tol && abs(Lambda_diff / Lambda_denom - 1) < tol) {
+          break;
+        }
+      }
+    }
+
+    // compute optimal zeta and return resulting matrices
+    arma::vec zeta(K);
+    for (int k = 0; k < K; k++) {
+      zeta(k) = arma::trace(Gamma * Lambda.slice(k) * Gamma.t() * L.slice(k));
+    }
+
+    for (int k = 0; k < K; k++) {
+      Sigmas.slice(k) = zeta(k) * Gamma * Lambda.slice(k) * Gamma.t() / R.slice(k);
     }
   }
   else if (constr == "EEV") {
