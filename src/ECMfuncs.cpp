@@ -444,9 +444,9 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
   else if (constr == "EVV") {
     double zeta = 0.0;
     double detval = 0.0;
+    arma::mat R(p,p); R.zeros();
     for (int k = 0; k < K; k++) {
       arma::mat L(p, p); L.zeros();
-      arma::mat R(p,p); R.zeros();
       for (int i=0; i<n; i++) {
         arma::mat Ai = arma::diagmat(A.row(i));
         arma::vec u = x.row(i).t() - mus.row(k).t();
@@ -459,11 +459,11 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
       L = L / detval;
 
       // this is the divide by n part of zeta*Lambda
-      Sigmas.slice(k) = L / R;
+      Sigmas.slice(k) = L;
     }
 
     for (int k = 0; k < K; k++) {
-      Sigmas.slice(k) = Sigmas.slice(k) * zeta;
+      Sigmas.slice(k) = zeta * Sigmas.slice(k) / R;
     }
   }
   // constraints with iterative solutions
@@ -472,17 +472,21 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
     // using the EEE solution
     arma::vec zeta(K); zeta.zeros();
     arma::mat C(p, p); C.zeros();
-    arma::mat L(p,p); L.zeros();
-    arma::mat R(p,p); R.zeros();
+    arma::cube L(p,p, K); L.zeros();
+    arma::cube R(p,p, K); R.zeros();
+    arma::vec rowsum(p);
     for (int k=0; k<K; k++) {
       for (int i=0; i<n; i++) {
         arma::mat Ai = arma::diagmat(A.row(i));
         arma::vec u = x.row(i).t() - mus.row(k).t();
-        L += z(i,k) * w(i,k) * Ai * u * u.t() * Ai;
-        R += z(i,k) * A.row(i).t() * A.row(i);
+        L.slice(k) += z(i,k) * w(i,k) * Ai * u * u.t() * Ai;
+        R.slice(k) += z(i,k) * A.row(i).t() * A.row(i);
       }
+      rowsum = sum(R.slice(k), 1);
+      R.slice(k).ones();
+      R.slice(k).diag() = rowsum;
     }
-    C = L / R;
+    C = arma::sum(L, 2) / arma::sum(R, 2);
     // start iterative procedure
     arma::mat W(p, p); W.zeros(); // accumulator for C
     arma::mat C_old(p, p);
@@ -497,16 +501,8 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
       C_old = C;
       zeta_old = zeta;
       for (int k = 0; k < K; k++) {
-        L.zeros(); R.zeros();
-        for (int i=0; i<n; i++) {
-          arma::mat Ai = arma::diagmat(A.row(i));
-          arma::vec u = x.row(i).t() - mus.row(k).t();
-          L += z(i,k) * w(i,k) * Ai * u * u.t() * Ai;
-          R += z(i,k) * A.row(i).t() * A.row(i);
-        }
-        // TODO: check that this is the correct thing to do
-        zeta(k) = arma::trace(L * C.i());
-        W += L / zeta(k) / R;
+        zeta(k) = arma::trace(L.slice(k) * C.i());
+        W += L.slice(k) / zeta(k) % R.slice(k);
       }
       C = W / pow(arma::det(W), 1.0 / p);
 
@@ -524,7 +520,7 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
       }
     }
     for (int k = 0; k < K; k++) {
-      Sigmas.slice(k) = zeta(k) * C;
+      Sigmas.slice(k) = zeta(k) * C / R.slice(k);
     }
   }
   else if (constr == "VEV") {
