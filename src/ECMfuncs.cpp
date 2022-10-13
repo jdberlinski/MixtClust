@@ -900,6 +900,7 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
     // work arrays
     arma::mat eigvec(p, p);
     arma::vec eigval(p);
+    arma::vec diagval(p);
 
     for (int k = 0; k < K; k++) {
       for (int i=0; i<n; i++) {
@@ -914,7 +915,10 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
     }
 
     for (int k = 0; k < K; k++) {
-      Sigmas.slice(k) = Gamma.slice(k) * Lambda * Gamma.slice(k).t() / R;
+      diagval = R.diag();
+      R.zeros();
+      R.diag() = diagval;
+      Sigmas.slice(k) = Gamma.slice(k) * Lambda * Gamma.slice(k).t() * R.i();
     }
 
   }
