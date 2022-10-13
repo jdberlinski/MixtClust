@@ -400,7 +400,7 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
 
     arma::mat Lambda = diagmat(L);
     for (int k = 0; k < K; k++) {
-      Sigmas.slice(k) = Lambda / n;
+      Sigmas.slice(k) = Lambda / R;
     }
   }
   else if (constr == "VVI") {
@@ -420,27 +420,25 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
   else if (constr == "EVI") {
     double zeta = 0.0;
     double detval = 0.0;
+    arma::mat R(p,p); R.zeros();
     for (int k = 0; k < K; k++) {
       arma::mat L(p, p); L.zeros();
-      arma::mat R(p,p); R.zeros();
       for (int i=0; i<n; i++) {
         arma::mat Ai = arma::diagmat(A.row(i));
         arma::vec u = x.row(i).t() - mus.row(k).t();
         L += z(i,k) * w(i,k) * Ai * u * u.t() * Ai;
         R += z(i,k) * A.row(i).t() * A.row(i);
       }
-      arma::mat Lambda = diagmat(L);
-      // TODO: check that p is actually the correct value to use here
+      arma::mat Lambda = arma::diagmat(L);
       detval = pow(arma::det(Lambda), 1.0 / p);
       zeta += detval;
       Lambda = Lambda / detval;
 
-      // this is the divide by n part of zeta*Lambda
-      Sigmas.slice(k) = Lambda / R;
+      Sigmas.slice(k) = Lambda;
     }
 
     for (int k = 0; k < K; k++) {
-      Sigmas.slice(k) = Sigmas.slice(k) * zeta;
+      Sigmas.slice(k) = Sigmas.slice(k) * zeta / R;
     }
   }
   else if (constr == "EVV") {
@@ -608,6 +606,7 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
     // get values for L and R
     arma::cube L(p, p, K); L.zeros();
     arma::cube R(p, p, K); R.zeros();
+    arma::vec rowsum(p);
     for (int k = 0; k < K; k++) {
       for (int i=0; i<n; i++) {
         arma::mat Ai = arma::diagmat(A.row(i));
@@ -615,6 +614,9 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
         L.slice(k) += z(i,k) * w(i,k) * Ai * u * u.t() * Ai;
         R.slice(k) += z(i,k) * A.row(i).t() * A.row(i);
       }
+      rowsum = arma::sum(R.slice(k), 1);
+      R.slice(k).ones();
+      R.slice(k).diag() = rowsum;
     }
 
     for (int iter = 0; iter < iter_max; iter++) {
