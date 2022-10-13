@@ -350,12 +350,16 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
     for (int k = 0; k < K; k++) {
       arma::mat L(p,p); L.zeros();
       arma::mat R(p,p); R.zeros();
+      arma::vec rowsums(p);
       for (int i=0; i<n; i++) {
         arma::mat Ai = arma::diagmat(A.row(i));
         arma::vec u = x.row(i).t() - mus.row(k).t();
         L += z(i,k) * w(i,k) * Ai * u * u.t() * Ai;
         R += z(i,k) * A.row(i).t() * A.row(i);
       }
+      rowsums = arma::sum(R, 1);
+      R.ones();
+      R.diag() = rowsums;
       arma::mat Iden(p, p, arma::fill::eye);
       double zeta = arma::trace(L);
       Sigmas.slice(k) = zeta * Iden / R;
@@ -364,6 +368,7 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
   else if (constr == "EII") {
     arma::mat L(p,p); L.zeros();
     arma::mat R(p,p); R.zeros();
+    arma::vec rowsums(p);
     for (int k = 0; k < K; k++) {
       for (int i=0; i<n; i++) {
         arma::mat Ai = arma::diagmat(A.row(i));
@@ -372,6 +377,9 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
         R += z(i,k) * A.row(i).t() * A.row(i);
       }
     }
+    rowsums = arma::sum(R, 1);
+    R.ones();
+    R.diag() = rowsums;
     arma::mat Iden(p, p, arma::fill::eye);
     double zeta = arma::trace(L);
     for (int k = 0; k < K; k++) {
@@ -499,8 +507,8 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
           R += z(i,k) * A.row(i).t() * A.row(i);
         }
         // TODO: check that this is the correct thing to do
-        zeta(k) = arma::trace(L * C.i() / R);
-        W += L / zeta(k);
+        zeta(k) = arma::trace(L * C.i());
+        W += L / zeta(k) / R;
       }
       C = W / pow(arma::det(W), 1.0 / p);
 
