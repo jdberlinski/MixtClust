@@ -453,12 +453,10 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
         L += z(i,k) * w(i,k) * Ai * u * u.t() * Ai;
         R += z(i,k) * A.row(i).t() * A.row(i);
       }
-      // TODO: check that p is actually the correct value to use here
       detval = pow(arma::det(L), 1.0 / p);
       zeta += detval;
       L = L / detval;
 
-      // this is the divide by n part of zeta*Lambda
       Sigmas.slice(k) = L;
     }
 
@@ -768,12 +766,15 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
       zeta += arma::trace(Gamma * Lambda.slice(k) * Gamma.t() * L.slice(k));
     }
 
+    arma::vec rowsum(p);
     for (int k = 0; k < K; k++) {
-      Sigmas.slice(k) = zeta * Gamma * Lambda.slice(k) * Gamma.t() / R;
+      rowsum = arma::sum(R, 1);
+      R.zeros();
+      R.diag() = rowsum;
+      Sigmas.slice(k) = zeta * Gamma * Lambda.slice(k) * Gamma.t() * R.i();
     }
   }
   else if (constr == "VVE") {
-    // TODO: something is wrong in this one, only produces two clusters on iris
     // get values for L and R
     arma::cube L(p, p, K); L.zeros();
     arma::cube R(p, p, K); R.zeros();
@@ -885,8 +886,12 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
       zeta(k) = arma::trace(Gamma * Lambda.slice(k) * Gamma.t() * L.slice(k));
     }
 
+    arma::vec rowsum(p);
     for (int k = 0; k < K; k++) {
-      Sigmas.slice(k) = zeta(k) * Gamma * Lambda.slice(k) * Gamma.t() / R.slice(k);
+      rowsum = arma::sum(R.slice(k), 1);
+      R.slice(k).zeros();
+      R.slice(k).diag() = rowsum;
+      Sigmas.slice(k) = zeta(k) * Gamma * Lambda.slice(k) * Gamma.t() * R.slice(k).i();
     }
   }
   else if (constr == "EEV") {
