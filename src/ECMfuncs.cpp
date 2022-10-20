@@ -481,10 +481,13 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
         R.slice(k) += z(i,k) * A.row(i).t() * A.row(i);
       }
       rowsum = sum(R.slice(k), 1);
-      R.slice(k).ones();
+      R.slice(k).zeros();
       R.slice(k).diag() = rowsum;
     }
-    C = arma::sum(L, 2) / arma::sum(R, 2);
+    /* arma::mat Rsum; */
+    /* Rsum = arma::sum(R, 2); */
+    /* C = arma::sum(L, 2) * Rsum.i(); */
+    C.eye();
     // start iterative procedure
     arma::mat W(p, p); W.zeros(); // accumulator for C
     arma::mat C_old(p, p);
@@ -500,7 +503,7 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
       zeta_old = zeta;
       for (int k = 0; k < K; k++) {
         zeta(k) = arma::trace(L.slice(k) * C.i());
-        W += L.slice(k) / zeta(k) % R.slice(k);
+        W += L.slice(k) / zeta(k) * R.slice(k);
       }
       C = W / pow(arma::det(W), 1.0 / p);
 
@@ -518,7 +521,7 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
       }
     }
     for (int k = 0; k < K; k++) {
-      Sigmas.slice(k) = zeta(k) * C / R.slice(k);
+      Sigmas.slice(k) = zeta(k) * C * R.slice(k).i();
     }
   }
   else if (constr == "VEV") {
