@@ -122,12 +122,12 @@ MixtClust <- function(x,
                       max.iter = 1e3,
                       tol = 1e-3,
                       convergence = "aitkens",
-                      sigma.constr = FALSE,
+                      sigma.constr = "VVV",
                       df.constr = FALSE,
                       approx.df = TRUE,
                       method = "marginalization",
                       verbose = TRUE,
-                      scaled = TRUE,
+                      scaled = FALSE,
                       emEM.args = list(nstarts = sqrt(nclusters*prod(dim(x))), em.iter = 1, nbest = 10))
 {
   mf <- match.call(expand.dots = FALSE)
