@@ -300,7 +300,39 @@ MixtClust <- function(x,
   #######################################################
   # Number of parameters = |pi|-1 + |mu| + |nu| + |Sigma|
   sigp <- (p*(p+1))/2
-  npar <- (nclusters-1) + nclusters*p + ifelse(df.constr, 1, nclusters) + ifelse(sigma.constr, sigp, nclusters*sigp)
+  # npar <- (nclusters-1) + nclusters*p + ifelse(df.constr, 1, nclusters) + ifelse(sigma.constr, sigp, nclusters*sigp)
+
+  npar <- (nclusters - 1) + nclusters*p + ifelse(df.constr, 1, nclusters)
+  if (sigma.constr == "VVV") {
+    npar <- npar + nclusters * (p * (p + 1)) / 2
+  } else if (sigma.constr == "EEE") {
+    npar <- npar + (p * (p + 1)) / 2
+  } else if (sigma.constr == "VII") {
+    npar <- npar + nclusters
+  } else if (sigma.constr == "EII") {
+    npar <- npar + 1
+  } else if (sigma.constr == "EEI") {
+    npar <- npar + p
+  } else if (sigma.constr == "VVI") {
+    npar <- npar + p*nclusters
+  } else if (sigma.constr == "EVI") {
+    npar <- npar + (p - 1)*nclusters + 1
+  } else if (sigma.constr == "EVV") {
+    npar <- npar + nclusters * p * (p - 1) / 2 + nclusters * (p - 1) + 1
+  } else if (sigma.constr == "VEE") {
+    npar <- npar + p * (p + 1) / 2 + nclusters - 1
+  } else if (sigma.constr == "VEV") {
+    npar <- npar + nclusters * p * (p - 1) / 2 + p + nclusters - 1
+  } else if (sigma.constr == "VEI") {
+    npar <- npar + p + nclusters - 1
+  } else if (sigma.constr == "EVE") {
+    npar <- npar + nclusters * (p - 1) + 1 + p * (p - 1) / 2
+  } else if (sigma.constr == "EEV") {
+    npar <- npar + p + nclusters * p * (p - 1) / 2
+  } else if (sigma.constr == "VVE") {
+    npar <- npar + nclusters * p + p * (p - 1) / 2
+  }
+
   multres <- rep(list(NA), length(initial.values))
   ptm <- proc.time()
   for (i in 1:length(initial.values)) {
