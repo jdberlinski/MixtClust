@@ -41,10 +41,12 @@ EM_iter <- function(oldpars, x, A, Ru, miss.grp, ps, sigma.constr, df.constr, ap
     if (marginalization) {
         Sigmasnew <- up_Sigma(x, z, w, musnew, A, sigma.constr)
     } else {
+        # TODO: this should be fixed, all sigmas can be updated at once
+        # according to the different constraints
         Sigmasnew <- sapply(1:K,
                             function(k) up_Sigmak_Lin(M, z[,k], w[,k], musnew[k,], oldpars$Sigma[,,k], xhat[[k]], miss.grp, SOiOEOO[[k]]),
                             simplify = 'array')
-        if (sigma.constr) {
+        if (sigma.constr == "EEE") {
             wtdSigmas <- lapply(1:K, function(k) pisnew[k]*Sigmasnew[,,k])
             Ss <- Reduce('+', wtdSigmas)
             for (k in 1:K) Sigmasnew[,,k] <- Ss

@@ -302,6 +302,10 @@ MixtClust <- function(x,
   sigp <- (p*(p+1))/2
   # npar <- (nclusters-1) + nclusters*p + ifelse(df.constr, 1, nclusters) + ifelse(sigma.constr, sigp, nclusters*sigp)
 
+  # assuming K == nclusters
+  # Volume: K parameters for varying, 1 for equal
+  # Shape: K*(p - 1) for varying, p - 1 for equal (one is left to match desired volume)
+  # Orientation: K*p*(p-1)/2 for varying, p*(p-1)/2 for equal number of parameters in an orthogonal matrix
   npar <- (nclusters - 1) + nclusters*p + ifelse(df.constr, 1, nclusters)
   if (sigma.constr == "VVV") {
     npar <- npar + nclusters * (p * (p + 1)) / 2
