@@ -1323,6 +1323,60 @@ arma::cube up_Sigma_Lin(arma::mat z, arma::mat w, arma::mat mu, arma::cube sigma
       Sigmas.slice(k) = zeta(k) * C;
     }
   }
+  else if (constr == "VEV") {
+    // initialize solution using EEE
+    Sigmas = up_Sigma_Lin(z, w, mu, sigma, xhat, grp, "EEE", Ru);
+
+    arma::mat eigvec(p, p);
+    arma::vec eigval(p);
+
+    arma::cube Gamma(p, p, K);
+    // Omega's contain the eigenvalues of the L matrix
+    arma::cube Omega(p, p, K);
+
+    for (int k = 0; k < K; k++) {
+      arma::eig_sym(eigval, eigvec, L.slice(k));
+      Gamma.slice(k) = eigvec;
+      Omega.slice(k) = arma::diagmat(eigval);
+    }
+
+    arma::vec zeta(K); zeta.zeros();
+    arma::mat Lambda(p, p); Lambda.eye();
+
+    arma::mat Lambda_old(p, p);
+    arma::vec zeta_old(K);
+
+    double lambda_diff, lambda_denom;
+    double zeta_diff, zeta_denom;
+
+    for (int iter = 0; iter < iter_max; iter++) {
+      Lambda_old = Lambda;
+      Lambda.zeros();
+      for (int k = 0; k < K; k++) {
+        zeta(k) = arma::trace(L.slice(k) * Gamma.slice(k) * Lambda_old.i() * Gamma.slice(k).t()) / (p * n_k(k));
+        Lambda += Omega.slice(k) / zeta(k);
+      }
+
+      Lambda = Lambda / pow(arma::det(Lambda), 1.0 / p);
+
+      if (iter > 1) {
+        zeta_diff = arma::accu(arma::square(zeta_old - zeta));
+        lambda_diff = arma::accu(arma::square(Lambda_old - Lambda));
+
+        lambda_denom = arma::accu(arma::square(Lambda_old));
+        zeta_denom = arma::accu(arma::square(zeta_old));
+
+        if (abs(zeta_diff / zeta_denom - 1) < tol && abs(lambda_diff / lambda_denom - 1) < tol) {
+          break;
+        }
+      }
+    }
+
+    for (int k = 0; k < K; k++) {
+      Sigmas.slice(k) = zeta(k) * Gamma.slice(k) * Lambda * Gamma.slice(k).t();
+    }
+
+  }
 
   return Sigmas;
 }
