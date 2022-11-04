@@ -1194,6 +1194,44 @@ arma::mat up_Sigmak_Lin(int M, arma::vec zk, arma::vec wk, arma::vec mu, arma::m
   return ans;
 }
 
+// Update Sigmas per Lins method with constraints
+// [[Rcpp::export]]
+arma::cube up_Sigma_Lin(arma::mat z, arma::mat w, arma::mat mu, arma::cube sigma,
+			arma::cube xhat, arma::vec grp, String constr, arma::umat Ru) {
+  // xhat <- lapply(1:K, function(k) xhatk(x, oldpars$mu[k,], miss.grp, M, SOiOEOO[[k]]))
+  // arma::mat xhatk(arma::mat x, arma::vec mu, arma::vec grp, int M, NumericVector SOiOEOOk) {
+  int n = xhat.slice(1).n_rows, p = xhat.slice(1).n_cols, K = z.n_cols;
+  arma::cube Sigmas(p, p, K); Sigmas.zeros();
+  arma::mat I = arma::eye(p,p);
+  /* arma::mat num(p,p); num.zeros(); */
+  /* double den = 0; */
+  // L here is the Omega matrix in Lin's paper
+  arma::cube L(p, p, K); L.zeros();
+  arma::mat L_tot(p, p); L.zeros();
+  arma::vec n_k(K); n_k.zeros();
+  for (int k = 0; k < K; k++) {
+    arma::cube R = SOiOEOOk(sigma.slice(k), Ru);
+    for (int i = 0; i < n; i++) {
+      int g = grp(i) - 1;
+      arma::vec u = xhat.slice(k).row(i).t() - mu.row(k).t(); // this probably needs to be changed
+      L.slice(k) += z(i, k) * (w(i, k) * u * u.t() + (I - R.slice(g)) * sigma.slice(k));
+      n_k(k) += z(i, k);
+    }
+    L_tot += L.slice(k);
+    if (constr == "VVV") {
+      Sigmas.slice(k) = L.slice(k) / n_k(k);
+    }
+  }
+
+  if (constr == "EEE") {
+    for (int k = 0; k < K; k++) {
+      Sigmas.slice(k) = L_tot / n;
+    }
+  }
+
+  return Sigmas;
+}
+
 // Compute the Q2 function
 // [[Rcpp::export]]
 double Q2(arma::mat x, arma::mat z, arma::mat w, NumericVector sigmas, arma::mat mus, arma::vec grp, arma::umat Ru) {

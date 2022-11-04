@@ -232,6 +232,24 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// up_Sigma_Lin
+arma::cube up_Sigma_Lin(arma::mat z, arma::mat w, arma::mat mu, arma::cube sigma, arma::cube xhat, arma::vec grp, String constr, arma::umat Ru);
+RcppExport SEXP _MixtClust_up_Sigma_Lin(SEXP zSEXP, SEXP wSEXP, SEXP muSEXP, SEXP sigmaSEXP, SEXP xhatSEXP, SEXP grpSEXP, SEXP constrSEXP, SEXP RuSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type z(zSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type w(wSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type mu(muSEXP);
+    Rcpp::traits::input_parameter< arma::cube >::type sigma(sigmaSEXP);
+    Rcpp::traits::input_parameter< arma::cube >::type xhat(xhatSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type grp(grpSEXP);
+    Rcpp::traits::input_parameter< String >::type constr(constrSEXP);
+    Rcpp::traits::input_parameter< arma::umat >::type Ru(RuSEXP);
+    rcpp_result_gen = Rcpp::wrap(up_Sigma_Lin(z, w, mu, sigma, xhat, grp, constr, Ru));
+    return rcpp_result_gen;
+END_RCPP
+}
 // Q2
 double Q2(arma::mat x, arma::mat z, arma::mat w, NumericVector sigmas, arma::mat mus, arma::vec grp, arma::umat Ru);
 RcppExport SEXP _MixtClust_Q2(SEXP xSEXP, SEXP zSEXP, SEXP wSEXP, SEXP sigmasSEXP, SEXP musSEXP, SEXP grpSEXP, SEXP RuSEXP) {
@@ -266,6 +284,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_MixtClust_xhatk", (DL_FUNC) &_MixtClust_xhatk, 5},
     {"_MixtClust_up_mu_Lin", (DL_FUNC) &_MixtClust_up_mu_Lin, 4},
     {"_MixtClust_up_Sigmak_Lin", (DL_FUNC) &_MixtClust_up_Sigmak_Lin, 8},
+    {"_MixtClust_up_Sigma_Lin", (DL_FUNC) &_MixtClust_up_Sigma_Lin, 8},
     {"_MixtClust_Q2", (DL_FUNC) &_MixtClust_Q2, 7},
     {NULL, NULL, 0}
 };
