@@ -1242,6 +1242,37 @@ arma::cube up_Sigma_Lin(arma::mat z, arma::mat w, arma::mat mu, arma::cube sigma
       Sigmas.slice(k) = zeta * I / (p * n);
     }
   }
+  else if (constr == "EEI") {
+    arma::mat Lambda = arma::diagmat(L_tot);
+    for (int k = 0; k < K; k++) {
+      Sigmas.slice(k) = Lambda / n;
+    }
+  }
+  else if (constr == "VVI") {
+    arma::mat Lambda;
+    for (int k = 0; k < K; k++) {
+      Lambda = arma::diagmat(L.slice(k));
+      Sigmas.slice(k) = Lambda / n_k(k);
+    }
+  }
+  else if (constr == "EVI") {
+    // the method here differs from what Lin has in his paper.
+    // I believe this is the correct solution (per Maitra's notes)
+    //   also the method in Lin's paper produces an error
+    arma::mat Lambda;
+    double zeta = 0;
+    double detval;
+    for (int k = 0; k < K; k++) {
+      Lambda = arma::diagmat(L.slice(k));
+      detval = pow(arma::det(Lambda), 1.0 / p);
+      Sigmas.slice(k) = Lambda / detval;
+      zeta += detval;
+    }
+    zeta /= n;
+    for (int k = 0; k < K; k++) {
+      Sigmas.slice(k) *= zeta;
+    }
+  }
 
   return Sigmas;
 }
