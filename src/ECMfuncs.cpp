@@ -1198,13 +1198,14 @@ arma::mat up_Sigmak_Lin(int M, arma::vec zk, arma::vec wk, arma::vec mu, arma::m
 // [[Rcpp::export]]
 arma::cube up_Sigma_Lin(arma::mat z, arma::mat w, arma::mat mu, arma::cube sigma,
 			arma::cube xhat, arma::vec grp, String constr, arma::umat Ru) {
-  // xhat <- lapply(1:K, function(k) xhatk(x, oldpars$mu[k,], miss.grp, M, SOiOEOO[[k]]))
-  // arma::mat xhatk(arma::mat x, arma::vec mu, arma::vec grp, int M, NumericVector SOiOEOOk) {
+  // TODO: add parameter for maximum iterations for iterative solutions
+  // same with tolerance
+  int iter_max = 100;
+  double tol = 0.01;
+
   int n = xhat.slice(1).n_rows, p = xhat.slice(1).n_cols, K = z.n_cols;
   arma::cube Sigmas(p, p, K); Sigmas.zeros();
   arma::mat I = arma::eye(p,p);
-  /* arma::mat num(p,p); num.zeros(); */
-  /* double den = 0; */
   // L here is the Omega matrix in Lin's paper
   arma::cube L(p, p, K); L.zeros();
   arma::mat L_tot(p, p); L.zeros();
@@ -1284,6 +1285,42 @@ arma::cube up_Sigma_Lin(arma::mat z, arma::mat w, arma::mat mu, arma::cube sigma
     zeta /= n;
     for (int k = 0; k < K; k++) {
       Sigmas.slice(k) *= zeta;
+    }
+  }
+  else if (constr == "VEE") {
+    arma::mat C = arma::eye(p, p);
+    arma::mat C_old(p, p);
+
+    arma::vec zeta(K);
+    arma::vec zeta_old(K);
+
+    double c_diff, c_denom, zeta_diff, zeta_denom;
+
+    for (int iter = 0; iter < iter_max; iter++) {
+      C_old = C;
+      zeta_old = zeta;
+      C.zeros();
+      for (int k = 0; k < K; k++) {
+        zeta(k) = arma::trace(L.slice(k) * C_old.i()) / (p * n_k(k));
+        C += L.slice(k) / zeta(k);
+      }
+      C = C / pow(arma::det(C), 1.0 / p);
+
+      if (iter > 1) {
+        c_diff = arma::accu(arma::square(C_old - C));
+        zeta_diff = arma::accu(arma::square(zeta_old - zeta));
+
+        c_denom = arma::accu(arma::square(C_old));
+        zeta_denom = arma::accu(arma::square(zeta_old));
+
+        if (abs(zeta_diff / zeta_denom - 1) < tol && abs(c_diff / c_denom - 1) < tol) {
+          break;
+        }
+      }
+    }
+
+    for (int k = 0; k < K; k++) {
+      Sigmas.slice(k) = zeta(k) * C;
     }
   }
 
