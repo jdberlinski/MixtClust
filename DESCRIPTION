@@ -2,7 +2,7 @@ Package: MixtClust
 Type: Package
 Title: Robust Clustering for Complete and Incomplete Data
 Version: 0.2.0
-Date: 2021-07-11
+Date: 2022-11-04
 Author: Emily Goren [aut, cre], Ranjan Maitra [aut], Joshua Berlinski [aut]
 Maintainer: Emily Goren <emily.goren@gmail.com>
 Authors@R: c(person("Emily", "Goren", email = "emily.goren@gmail.com",
