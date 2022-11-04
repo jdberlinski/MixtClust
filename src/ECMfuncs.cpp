@@ -1377,6 +1377,45 @@ arma::cube up_Sigma_Lin(arma::mat z, arma::mat w, arma::mat mu, arma::cube sigma
     }
 
   }
+  else if (constr == "VEI") {
+    arma::mat Lambda = arma::eye(p, p);
+    arma::vec zeta(K);
+
+    arma::mat W_acc(p, p);
+
+    double zeta_diff, zeta_denom;
+    double lambda_diff, lambda_denom;
+    arma::mat Lambda_old(p, p);
+    arma::vec zeta_old(K);
+
+    for (int iter = 0; iter < iter_max; iter++) {
+      W_acc.zeros();
+      Lambda_old = Lambda;
+      zeta_old = zeta;
+
+      for (int k = 0; k < K; k++) {
+        zeta(k) = arma::trace(L.slice(k) * Lambda.i()) / (p * n_k(k));
+        W_acc += L.slice(k) / zeta(k);
+      }
+      Lambda = arma::diagmat(W_acc) / pow(arma::det(arma::diagmat(W_acc)), 1.0 / p);
+
+      if (iter > 1) {
+        zeta_diff = arma::accu(arma::square(zeta_old - zeta));
+        lambda_diff = arma::accu(arma::square(Lambda_old - Lambda));
+
+        lambda_denom = arma::accu(arma::square(Lambda_old));
+        zeta_denom = arma::accu(arma::square(zeta_old));
+
+        if (abs(zeta_diff / zeta_denom - 1) < tol && abs(lambda_diff / lambda_denom - 1) < tol) {
+          break;
+        }
+      }
+    }
+
+    for (int k = 0; k < K; k++) {
+      Sigmas.slice(k) = zeta(k) * Lambda;
+    }
+  }
 
   return Sigmas;
 }
