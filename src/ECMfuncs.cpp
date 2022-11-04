@@ -1228,6 +1228,20 @@ arma::cube up_Sigma_Lin(arma::mat z, arma::mat w, arma::mat mu, arma::cube sigma
       Sigmas.slice(k) = L_tot / n;
     }
   }
+  else if (constr == "VII") {
+    double zeta;
+    for (int k = 0; k < K; k++) {
+      zeta = arma::trace(L.slice(k));
+
+      Sigmas.slice(k) = zeta * I / (p * n_k(k));
+    }
+  }
+  else if (constr == "EII") {
+    double zeta = arma::trace(L_tot);
+    for (int k = 0; k < K; k++) {
+      Sigmas.slice(k) = zeta * I / (p * n);
+    }
+  }
 
   return Sigmas;
 }
