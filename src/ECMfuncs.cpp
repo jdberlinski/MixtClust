@@ -1627,6 +1627,31 @@ arma::cube up_Sigma_Lin(arma::mat z, arma::mat w, arma::mat mu, arma::cube sigma
       Sigmas.slice(k) = zeta(k) * Gamma * Lambda.slice(k) * Gamma.t();
     }
   }
+  else if (constr == "EEV") {
+    // based on the notes, there is no need to calculate the zetas
+    arma::cube Gamma(p, p, K);
+    arma::mat Lambda(p, p); Lambda.zeros();
+
+    // work arrays
+    arma::mat eigvec(p, p);
+    arma::vec eigval(p);
+
+    for (int k = 0; k < K; k++) {
+      arma::eig_sym(eigval, eigvec, L.slice(k));
+      Gamma.slice(k) = eigvec;
+      // TODO: should this be reversed...?
+      // Lin's paper says that this diagonal matrix should have the eigenvalues
+      // in _descending_ order, but armadillo returns them in ascending order...
+      // this works and gives decent results for the marginalization method,
+      // however
+      Lambda += arma::diagmat(eigval);
+    }
+
+    for (int k = 0; k < K; k++) {
+      Sigmas.slice(k) = Gamma.slice(k) * Lambda * Gamma.slice(k).t() / n;
+    }
+
+  }
 
   return Sigmas;
 }
