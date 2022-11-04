@@ -5,17 +5,19 @@ Version: 0.1-13
 Date: 2021-07-11
 Author: Emily Goren [aut, cre], Ranjan Maitra [aut], Joshua Berlinski [aut]
 Maintainer: Emily Goren <emily.goren@gmail.com>
-Authors@R: person("Emily", "Goren", email = "emily.goren@gmail.com",
-                  role = c("aut", "cre"))
+Authors@R: c(person("Emily", "Goren", email = "emily.goren@gmail.com",
+                  role = c("aut", "cre")),
            person("Ranjan", "Maitra", email = "maitra@iastate.edu",
-                  role = c("aut"))
+                  role = c("aut")),
            person("Joshua", "Berlinski", email = "jberlin@iastate.edu",
-                  role = c("aut"))
+                  role = c("aut")))
 Description: Model-based clustering using finite mixtures of t distributions, with handling of incomplete data using either marginalization or the EM algorithm.
 License: GPL (>= 2)
-Imports: 
+Imports:
     kmmeans,
-    Rcpp (>= 0.12.17)
+    methods,
+    Rcpp (>= 0.12.17),
+    stats
 Suggests: testthat
 LinkingTo: Rcpp, RcppArmadillo, RcppGSL
 RoxygenNote: 7.2.1

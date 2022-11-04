@@ -273,7 +273,7 @@ MixtClust <- function(x,
       marginalization, init = "kmeans")
     em.time <- NA
     initial.values <- list(initial.values$estimates)
-  } else if (class(initial.values) == 'list') {
+  } else if (is(initial.values, "list")) {
     emEM <- FALSE
     # check supplied values
     if (!(all(names(initial.values) %in% parnames & parnames %in% names(initial.values))))
