@@ -1257,15 +1257,28 @@ arma::cube up_Sigma_Lin(arma::mat z, arma::mat w, arma::mat mu, arma::cube sigma
   }
   else if (constr == "EVI") {
     // the method here differs from what Lin has in his paper.
-    // I believe this is the correct solution (per Maitra's notes)
-    //   also the method in Lin's paper produces an error
+    // I believe this is the correct solution (per Maitra's notes), see function up_Sigma
+    // (also the method in Lin's paper produces an error)
     arma::mat Lambda;
-    double zeta = 0;
+    double zeta = 0.0;
     double detval;
     for (int k = 0; k < K; k++) {
       Lambda = arma::diagmat(L.slice(k));
       detval = pow(arma::det(Lambda), 1.0 / p);
       Sigmas.slice(k) = Lambda / detval;
+      zeta += detval;
+    }
+    zeta /= n;
+    for (int k = 0; k < K; k++) {
+      Sigmas.slice(k) *= zeta;
+    }
+  }
+  else if (constr == "EVV") {
+    double zeta = 0.0;
+    double detval;
+    for (int k = 0; k < K; k++) {
+      detval = pow(arma::det(L.slice(k)), 1.0 / p);
+      Sigmas.slice(k) = L.slice(k) / detval;
       zeta += detval;
     }
     zeta /= n;
