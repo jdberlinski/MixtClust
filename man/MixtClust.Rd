@@ -11,13 +11,13 @@ MixtClust(
   max.iter = 1000,
   tol = 0.001,
   convergence = "aitkens",
-  sigma.constr = FALSE,
+  sigma.constr = "VVV",
   df.constr = FALSE,
   approx.df = TRUE,
   method = "marginalization",
   verbose = TRUE,
-  scaled = TRUE,
-  emEM.args = list(nstarts = nclusters * 10 * prod(dim(x)), em.iter = 5, nbest = 4)
+  scaled = FALSE,
+  emEM.args = list(nstarts = sqrt(nclusters * prod(dim(x))), em.iter = 1, nbest = 10)
 )
 }
 \arguments{
@@ -39,11 +39,11 @@ allowed.}
 \item{tol}{Positive scalar. The desired stopping criterion value.}
 
 \item{convergence}{Either \code{"lop"} specifying use of relative change
-in loglikelihood as the convergence criterion, or \code{"aitkens"} specifying 
+in loglikelihood as the convergence criterion, or \code{"aitkens"} specifying
 Aitken's acceleration (default).}
 
-\item{sigma.constr}{Logical. Should the dispersion matrices \eqn{\Sigma_k} be
-held constant over \eqn{k = 1,\dots,K} all clusters?}
+\item{sigma.constr}{Character specifying constrains on dispersion matrices
+for each group. See details for further explanation.}
 
 \item{df.constr}{Logical. Should the degrees of freedom \eqn{\nu_k} be held
 constant over \eqn{k = 1,\dots,K} all clusters?}
@@ -52,7 +52,7 @@ constant over \eqn{k = 1,\dots,K} all clusters?}
 approximation of the objective function used to estimate the degrees of
 freedom \eqn{\nu_k} for \eqn{k = 1,\dots,K}.}
 
-\item{method}{How should missing entries be handled? Must be either 
+\item{method}{How should missing entries be handled? Must be either
 \code{"fullEM"} to include missing entries in the EM algorithm following Lin 2009,
  \code{"marginalization"} to integrating out missing entries, or \code{"deletion"}
  to analyze complete cases only.}
@@ -76,8 +76,8 @@ A list containing: \itemize{ \item{"estimates"}{ A list of the final
   cluster \eqn{1, \dots, K} for the \eqn{i}-th observation
   (\eqn{i=1,\dots,n}).} \item{"class"}{ A vector of length \eqn{n} with the
   predicted class memberships for each observation.} \item{"loglik"}{ The
-  log likelihood at each (long EM run) iteration.} \item{"loglik"}{The 
-  log likelihood at the last iteration, computed for all cases (including 
+  log likelihood at each (long EM run) iteration.} \item{"loglik"}{The
+  log likelihood at the last iteration, computed for all cases (including
   those with missing values when \code{method = "deletion"})}
   \item{"bic"}{ The BIC for
   the final fitted model.} \item{"EM.time"}{ Runtime for the long EM run(s).}
@@ -115,7 +115,23 @@ initial values, the number of top ranking (according to loglikelihood)
 parameter values on which to run the long EM either to convergence (specified
 by \code{tol}) or maximum number of iterations (specified by
 \code{max.iter}). If \code{nbest} is greater than one, the long EM run
-achieving the largest loglikelihood will be returned.} }
+achieving the largest loglikelihood will be returned.}
+
+Note that because of how the 'marginalization' algorithm is derived, it is
+recommended to use em.iter = 1,  this results in the Rnd-EM algorithm of
+Maitra (2009) when using 'marginalization'
+}
+
+Constraints on the dispersion matrices for each group are specified according
+to the decomposition of the dispersion matrices \deqn{\Sigma_k = \zeta_k \Gamma_k \Lambda_k \Gamma_k^\top.}
+The nomenclature is a three letter string following that of other popular packages, such as
+\code{mclust}. The three letters specify constrains on the volume
+(\eqn{\zeta_k}), shape (\eqn{\Lambda_k}), and orientation (\eqn{\Gamma_k}),
+respectively. Each letter is either "V" or "E", specifying that the
+corresponding component is allowed to vary or must remain equal across
+groups, respectively. Additional specifications include "VII", "EII", "VVI",
+"VEI", "EVI", and "EEI", where the "I" indicates the corresponding component
+is an identity matrix of appropriate dimensions.
 
 Model-based clustering using finite mixtures of t distributions, with handling of incomplete data using either marginalization or the EM algorithm.
 }
@@ -138,11 +154,16 @@ plot(BICs ~ Ks, pch = 20, xlab = 'Number of Clusters', ylab = 'BIC')
 
 }
 \references{
-Emily M. Goren & Ranjan Maitra, 2022. "Fast model-based clustering of partial records," Stat, 11(1), e416. https://doi.org/10.1002/sta4.416"
+Emily Goren & Ranjan Maitra, 2021.
+"Model-based clustering of partial records," arXiv:2103.16336.
+https://arxiv.org/abs/2103.16336
+
+Ranjan Maitra, 2009. "Initializing optimization partitioning algorithms," ACM/IEEE Transactions on Computational Biology and Bioinformatics, 6:1:144–157.
 
 Tsung-I Lin & Hsiu Ho & Pao Shen, 2009. "Computationally
 efficient learning of multivariate t mixture models with missing
 information," Computational Statistics, 24(3): 375-392.
+#'
 }
 \author{
 Emily Goren, \email{emily.goren@gmail.com}

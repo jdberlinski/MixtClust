@@ -18,8 +18,8 @@
 #' @param convergence Either \code{"lop"} specifying use of relative change
 #'   in loglikelihood as the convergence criterion, or \code{"aitkens"} specifying
 #'   Aitken's acceleration (default).
-#' @param sigma.constr Logical. Should the dispersion matrices \eqn{\Sigma_k} be
-#'   held constant over \eqn{k = 1,\dots,K} all clusters?
+#' @param sigma.constr Character specifying constrains on dispersion matrices
+#'   for each group. See details for further explanation.
 #' @param df.constr Logical. Should the degrees of freedom \eqn{\nu_k} be held
 #'   constant over \eqn{k = 1,\dots,K} all clusters?
 #' @param approx.df Logical. If \code{approx.df = TRUE}, a numerical
@@ -65,6 +65,17 @@
 #' recommended to use em.iter = 1,  this results in the Rnd-EM algorithm of
 #' Maitra (2009) when using 'marginalization'
 #' }
+#'
+#' Constraints on the dispersion matrices for each group are specified according
+#' to the decomposition of the dispersion matrices \deqn{\Sigma_k = \zeta_k \Gamma_k \Lambda_k \Gamma_k^\top.}
+#' The nomenclature is a three letter string following that of other popular packages, such as
+#' \code{mclust}. The three letters specify constrains on the volume
+#' (\eqn{\zeta_k}), shape (\eqn{\Lambda_k}), and orientation (\eqn{\Gamma_k}),
+#' respectively. Each letter is either "V" or "E", specifying that the
+#' corresponding component is allowed to vary or must remain equal across
+#' groups, respectively. Additional specifications include "VII", "EII", "VVI",
+#' "VEI", "EVI", and "EEI", where the "I" indicates the corresponding component
+#' is an identity matrix of appropriate dimensions.
 #'
 #' @references Emily Goren & Ranjan Maitra, 2021.
 #' "Model-based clustering of partial records," arXiv:2103.16336.
