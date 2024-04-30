@@ -358,11 +358,11 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
         R += z(i,k) * A.row(i).t() * A.row(i);
       }
       rowsums = arma::sum(R, 1);
-      R.ones();
+      R.zeros();
       R.diag() = rowsums;
       arma::mat Iden(p, p, arma::fill::eye);
       double zeta = arma::trace(L);
-      Sigmas.slice(k) = zeta * Iden / R;
+      Sigmas.slice(k) = zeta * Iden * R.i();
     }
   }
   else if (constr == "EII") {
@@ -378,12 +378,12 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
       }
     }
     rowsums = arma::sum(R, 1);
-    R.ones();
+    R.zeros();
     R.diag() = rowsums;
     arma::mat Iden(p, p, arma::fill::eye);
     double zeta = arma::trace(L);
     for (int k = 0; k < K; k++) {
-      Sigmas.slice(k) = zeta * Iden / R;
+      Sigmas.slice(k) = zeta * Iden * R.i();
     }
   }
   else if (constr == "EEI") {
@@ -413,8 +413,10 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
         L += z(i,k) * w(i,k) * Ai * u * u.t() * Ai;
         R += z(i,k) * A.row(i).t() * A.row(i);
       }
+      // R = diagmat(R);
       arma::mat Lambda = diagmat(L);
       Sigmas.slice(k) = Lambda / R;
+      // Sigmas.slice(k) = Lambda * R.i();
     }
   }
   else if (constr == "EVI") {
@@ -546,9 +548,9 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
         R.slice(k) += z(i,k) * A.row(i).t() * A.row(i);
       }
       rowsum = arma::sum(R.slice(k), 1);
-      R.slice(k).ones();
+      R.slice(k).zeros();
       R.slice(k).diag() = rowsum;
-      arma::eig_sym(eigval, eigvec, L.slice(k));
+      arma::eig_sym(eigval, eigvec, L.slice(k)); // to ensure computational symchange2 here
       Gamma.slice(k) = eigvec;
       Omega.slice(k) = arma::diagmat(eigval);
     }
@@ -567,7 +569,7 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
       Lambda.zeros();
       for (int k = 0; k < K; k++) {
         zeta(k) = arma::trace(L.slice(k) * Gamma.slice(k) * Lambda_old.i() * Gamma.slice(k).t());
-        Lambda += Omega.slice(k) / zeta(k) % R.slice(k);
+        Lambda += Omega.slice(k) * R.slice(k) / zeta(k);
       }
 
       Lambda = Lambda / pow(arma::det(Lambda), 1.0 / p);
@@ -586,10 +588,11 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
     }
 
     for (int k = 0; k < K; k++) {
-      rowsum = R.slice(k).diag();
-      R.slice(k).zeros();
-      R.slice(k).diag() = rowsum;
-      Sigmas.slice(k) = zeta(k) * Gamma.slice(k) * Lambda * Gamma.slice(k).t() * R.slice(k).i();
+      // rowsum = R.slice(k).diag();
+      // R.slice(k).zeros();
+      // R.slice(k).diag() = rowsum;
+      // force symmetry to ensure computational errors don't happen
+      Sigmas.slice(k) = arma::symmatu(zeta(k) * Gamma.slice(k) * Lambda * Gamma.slice(k).t() * R.slice(k).i());
     }
   }
   else if (constr == "VEI") {
@@ -619,7 +622,7 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
         R.slice(k) += z(i,k) * A.row(i).t() * A.row(i);
       }
       rowsum = arma::sum(R.slice(k), 1);
-      R.slice(k).ones();
+      R.slice(k).zeros();
       R.slice(k).diag() = rowsum;
     }
 
@@ -635,7 +638,7 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
       // (element-wise) by R
       for (int k = 0; k < K; k++) {
         zeta(k) = arma::trace(L.slice(k) * Lambda.i());
-        W_acc += L.slice(k) / R.slice(k) / zeta(k);
+        W_acc += L.slice(k) * R.slice(k) / zeta(k);
       }
       Lambda = arma::diagmat(W_acc) / pow(arma::det(arma::diagmat(W_acc)), 1.0 / p);
 
@@ -654,7 +657,8 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
     }
 
     for (int k = 0; k < K; k++) {
-      Sigmas.slice(k) = Lambda * zeta(k) / R.slice(k);
+      Sigmas.slice(k) = Lambda * zeta(k) * R.slice(k).i();
+      // Sigmas.slice(k) = Lambda * zeta(k) / R.slice(k);
     }
   }
   else if (constr == "EVE") {
@@ -923,10 +927,12 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
     }
 
     for (int k = 0; k < K; k++) {
-      diagval = R.diag();
-      R.zeros();
-      R.diag() = diagval;
-      Sigmas.slice(k) = Gamma.slice(k) * Lambda * Gamma.slice(k).t() * R.i();
+      // diagval = R.diag();
+      // R.zeros();
+      // R.diag() = diagval;
+      // Sigmas.slice(k) = Gamma.slice(k) * Lambda * Gamma.slice(k).t() * R.i();
+      // avoid accumulated computational error
+      Sigmas.slice(k) = arma::symmatu(Gamma.slice(k) * Lambda * Gamma.slice(k).t() / R);
     }
 
   }
