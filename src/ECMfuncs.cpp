@@ -727,8 +727,9 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
         else {
           // we need to find the largest eigenvalue of each Lambda(k);
           for (int k = 0; k < K; k++) {
-            arma::eig_sym(eigval, eigvec, Lambda.slice(k));
-            Lambda_eig(k) = eigval(p - 1);
+            arma::eig_sym(eigval, eigvec, Lambda.slice(k).i()); // TODO: this should be the inverse
+            Lambda_eig(k) = eigval(p - 1); // should this be p rather than p-1?
+            // Lambda_eig(k) = eigval(p); // should this be p rather than p-1?
             F += L.slice(k) * Gamma * Lambda.slice(k).i() - Lambda_eig(k) * L.slice(k) * Gamma;
           }
           arma::svd(P, b, C, F);
