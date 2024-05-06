@@ -523,7 +523,8 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
       }
     }
     for (int k = 0; k < K; k++) {
-      Sigmas.slice(k) = zeta(k) * C * R.slice(k).i();
+      // Sigmas.slice(k) = zeta(k) * C * R.slice(k).i();
+      Sigmas.slice(k) = arma::symmatu(zeta(k) * C * R.slice(k).i());
     }
   }
   else if (constr == "VEV") {
@@ -680,7 +681,7 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
         L.slice(k) += z(i,k) * w(i,k) * Ai * u * u.t() * Ai;
         R += z(i,k) * A.row(i).t() * A.row(i);
       }
-      arma::eig_sym(eigval, eigvec, L.slice(k)); // values are in ascending order
+      arma::eig_sym(eigval, eigvec, arma::symmatu(L.slice(k))); // values are in ascending order
       L_eig(k) = eigval(p - 1);
     }
 
@@ -727,7 +728,7 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
         else {
           // we need to find the largest eigenvalue of each Lambda(k);
           for (int k = 0; k < K; k++) {
-            arma::eig_sym(eigval, eigvec, Lambda.slice(k).i()); // TODO: this should be the inverse
+            arma::eig_sym(eigval, eigvec, arma::symmatu(Lambda.slice(k).i())); // TODO: this should be the inverse
             Lambda_eig(k) = eigval(p - 1); // should this be p rather than p-1?
             // Lambda_eig(k) = eigval(p); // should this be p rather than p-1?
             F += L.slice(k) * Gamma * Lambda.slice(k).i() - Lambda_eig(k) * L.slice(k) * Gamma;
@@ -779,7 +780,8 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
       rowsum = arma::sum(R, 1);
       R.zeros();
       R.diag() = rowsum;
-      Sigmas.slice(k) = zeta * Gamma * Lambda.slice(k) * Gamma.t() * R.i();
+      // Sigmas.slice(k) = zeta * Gamma * Lambda.slice(k) * Gamma.t() * R.i();
+      Sigmas.slice(k) = arma::symmatu(zeta * Gamma * Lambda.slice(k) * Gamma.t() * R.i());
     }
   }
   else if (constr == "VVE") {
@@ -801,7 +803,7 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
         L.slice(k) += z(i,k) * w(i,k) * Ai * u * u.t() * Ai;
         R.slice(k) += z(i,k) * A.row(i).t() * A.row(i);
       }
-      arma::eig_sym(eigval, eigvec, L.slice(k)); // values are in ascending order
+      arma::eig_sym(eigval, eigvec, arma::symmatu(L.slice(k))); // values are in ascending order
       L_eig(k) = eigval(p - 1);
     }
 
@@ -848,7 +850,7 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
         else {
           // we need to find the largest eigenvalue of each Lambda(k);
           for (int k = 0; k < K; k++) {
-            arma::eig_sym(eigval, eigvec, Lambda.slice(k));
+            arma::eig_sym(eigval, eigvec, arma::symmatu(Lambda.slice(k).i())); // TODO: this might need to change
             Lambda_eig(k) = eigval(p - 1);
             F += L.slice(k) * Gamma * Lambda.slice(k).i() - Lambda_eig(k) * L.slice(k) * Gamma;
           }
@@ -899,7 +901,8 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
       rowsum = arma::sum(R.slice(k), 1);
       R.slice(k).zeros();
       R.slice(k).diag() = rowsum;
-      Sigmas.slice(k) = zeta(k) * Gamma * Lambda.slice(k) * Gamma.t() * R.slice(k).i();
+      // Sigmas.slice(k) = zeta(k) * Gamma * Lambda.slice(k) * Gamma.t() * R.slice(k).i();
+      Sigmas.slice(k) = arma::symmatu(zeta(k) * Gamma * Lambda.slice(k) * Gamma.t() * R.slice(k).i());
     }
   }
   else if (constr == "EEV") {
@@ -1526,7 +1529,7 @@ arma::cube up_Sigma_Lin(arma::mat z, arma::mat w, arma::mat mu, arma::cube sigma
     zeta /= (n * p);
 
     for (int k = 0; k < K; k++) {
-      Sigmas.slice(k) = zeta * Gamma * Lambda.slice(k) * Gamma.t();
+      Sigmas.slice(k) = arma::symmatu(zeta * Gamma * Lambda.slice(k) * Gamma.t());
     }
   }
   else if (constr == "VVE") {
