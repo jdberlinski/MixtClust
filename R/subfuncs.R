@@ -96,7 +96,7 @@ get.init.val <- function(X, R, K, df.constr, sigma.constr, init = "smart-random"
         mus_unobs <- matrix(colMeans(y_unobs, na.rm = T), nrow = 1)
         nks_unobs <- nrow(y_unobs)
         pis_unobs <- nrow(y_unobs) / n
-      } else {
+      } else if (K != M) {
         minnks <- 0
         while (minnks <= p) {
           ## Let us at least put in at least p + 1 observation pairs in each group
@@ -113,6 +113,11 @@ get.init.val <- function(X, R, K, df.constr, sigma.constr, init = "smart-random"
           Sigmas_unobs[,,k] <- cov(y_unobs[res$partition==k,], use = "pairwise.complete.obs")
           Sigmas_unobs[,,k]  <- Sigmas_unobs[,,k] + 1e-3 * diag(p)
         }
+      } else {
+        # if K == M, we don't need to consider the unobserved cases for initialization
+        nks_unobs <- NULL
+        pis_unobs <- NULL
+        mus_unobs <- NULL
       }
 
       # combine results
