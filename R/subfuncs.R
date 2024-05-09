@@ -5,14 +5,14 @@ row_match <- function(row, matrix) {
 }
 
 ## Perform one EM iteration (of all ECM steps).
-EM_iter <- function(oldpars, x, A, Ru, miss.grp, ps, sigma.constr, df.constr, approx.df, marginalization) {
+EM_iter <- function(oldpars, x, A, Ru, miss.grp, ps, sigma.constr, df.constr, approx.df, marginalization, labeled_obs, class_indicators) {
     k <- length(oldpars$pi)
     ## 1st cycle -- update cluster proportions, means, dfs
     ## E-step followed by CM-step for pi
     ##    print(are.sigmas.valid(oldpars$Sigma))
     w <- up_W(x, oldpars$mu, oldpars$Sigma, oldpars$nu, miss.grp, Ru)
     if (k > 1) {
-        z <- up_Z(x, oldpars$mu, oldpars$Sigma, oldpars$nu, oldpars$pi, miss.grp, Ru)
+        z <- up_Z(x, oldpars$mu, oldpars$Sigma, oldpars$nu, oldpars$pi, miss.grp, Ru, labeled_obs, class_indicators)
         pisnew <- as.numeric(up_pi(z))
     } else {
         z <- matrix(1, nrow(x), k)
@@ -36,7 +36,7 @@ EM_iter <- function(oldpars, x, A, Ru, miss.grp, ps, sigma.constr, df.constr, ap
     bidx <- !is.finite(nusnew); nusnew[bidx] <- oldpars$nu[bidx] # fix any NaN
     ## 2nd cycle -- update dispersions
     if (k > 1)
-        z <- up_Z(x, musnew, oldpars$Sigma, nusnew, pisnew, miss.grp, Ru)
+        z <- up_Z(x, musnew, oldpars$Sigma, nusnew, pisnew, miss.grp, Ru, labeled_obs, class_indicators)
     w <- up_W(x, musnew, oldpars$Sigma, nusnew, miss.grp, Ru)
     if (marginalization) {
         Sigmasnew <- up_Sigma(x, z, w, musnew, A, sigma.constr)
@@ -51,7 +51,7 @@ EM_iter <- function(oldpars, x, A, Ru, miss.grp, ps, sigma.constr, df.constr, ap
 }
 
 ## Function to generate a set of initial parameter values.
-get.init.val <- function(X, R, K, df.constr, sigma.constr, init = "smart-random", Z = NULL) {
+get.init.val <- function(X, R, K, df.constr, sigma.constr, init = "smart-random", labeled_obs = NULL, class_indicators = NULL, Z = NULL) {
     ##if (df.constr) nus <- rep(runif(1, 5, 25), K) else nus <- runif(K, 5, 25)
     ## Follow teigen: set dfstart to 50
     ##nus <- runif(K, min = 10, max = 50)
@@ -63,7 +63,72 @@ get.init.val <- function(X, R, K, df.constr, sigma.constr, init = "smart-random"
         old.inits <- FALSE else
                                old.inits  <- TRUE
 
-    if (!old.inits) {
+    if (any(labeled_obs)) {
+      if (old.inits) stop("only emEM is supported in the semi-supervised case")
+      y_obs <- X[labeled_obs, ]
+      R_obs <- R[labeled_obs, ]
+      y_obs[R_obs] <- NA
+      y_unobs <- X[!labeled_obs, ]
+      R_unobs <- R[!labeled_obs, ]
+      y_unobs[R_unobs] <- NA
+
+      obs_class <- apply(class_indicators[labeled_obs, ], 1, which.max)
+      M <- max(obs_class)
+
+      Sigmas <- array(0, dim=c(p, p, K))
+
+      # first, initialize the observed classes
+      Sigmas_obs <- array(0, dim = c(p, p, M))
+      mus_obs <- matrix(0, nrow = M, ncol = p)
+      nks_obs <- numeric(M)
+      pis_obs <- numeric(M)
+      for (k in 1:M) {
+        Sigmas_obs[, , k] <- cov(y_obs[obs_class == k, ], use = "pairwise.complete.obs")
+        mus_obs[k, ] <- colMeans(y_obs[obs_class == k, ], na.rm = T)
+        nks_obs[k] <- sum(obs_class == k)
+        pis_obs[k] <- sum(obs_class == k) / n
+      }
+
+      # now, initialize the remaining classes using the cases with unobserved labels
+      Sigmas_unobs <- array(0, dim = c(p, p, K - M))
+      if ((K - 1) == M) {
+        Sigmas_unobs[, , 1] <- cov(y_unobs, use = "pairwise.complete.obs")
+        mus_unobs <- matrix(colMeans(y_unobs, na.rm = T), nrow = 1)
+        nks_unobs <- nrow(y_unobs)
+        pis_unobs <- nrow(y_unobs) / n
+      } else {
+        minnks <- 0
+        while (minnks <= p) {
+          ## Let us at least put in at least p + 1 observation pairs in each group
+          res <- kmmeans::kmmeans(data = as.data.frame(y_unobs), K = K - M, n.init = 1, kmmns.iter = 0)
+          res$partition <- res$partition + 1
+          minks <- sapply(1:(K - M), function(x)(min(crossprod(!R_unobs[res$partition==x,]))))
+          minnks <- min(minks)
+        }
+
+        nks_unobs <- table(res$partition)
+        pis_unobs <- nks_unobs / n
+        mus_unobs <- res$centers
+        for (k in 1:(K - M)) {
+          Sigmas_unobs[,,k] <- cov(y_unobs[res$partition==k,], use = "pairwise.complete.obs")
+          Sigmas_unobs[,,k]  <- Sigmas_unobs[,,k] + 1e-3 * diag(p)
+        }
+      }
+
+      # combine results
+      for (k in 1:K) {
+        if (k <= M)
+          Sigmas[, , k] <- Sigmas_obs[, , k]
+        else
+          Sigmas[, , k] <- Sigmas_unobs[, , k - M]
+      }
+
+      mus <- rbind(mus_obs, mus_unobs)
+      nks <- c(nks_unobs, nks_obs)
+      pis <- c(pis_unobs, pis_obs)
+    }
+
+    else if (!old.inits) {
         ## smart random initialization chooses random points in sequence from the dataset with probability inversely proportional to the distance from (the closest of) the previous points. We use the kmmeans with 0 iterations to achieve this. Note that this function can handle missing data and so does not particularly care over missing cases, and can handle them fine.
         ## because we use pairwise complete observations to calculate the estimates of the Sigmas, it is possible that these are singular. So, instead of checking for stability as we were doing earlier, we simply add a small value to the doagonal (0.001 times the identity matrix) to make the matrix more non-singular).
         y <- X
@@ -74,6 +139,11 @@ get.init.val <- function(X, R, K, df.constr, sigma.constr, init = "smart-random"
             pis <- 1
             mus <- matrix(colMeans(y,na.rm=T), nrow = 1)
         } else {
+          # TODO: This should be done only on the unknown observations, with the number of clusters initialized being
+          # the difference between the number of observed clusters and the total number of clusters
+          #   - What if these are equal, and there are less than p-1 observations in one of the observed clusters?
+          #   - More speficically, if I have M groups in the known labels, what if I have less than (K - M)(p + 1)
+          #   unlabeled observations?
             ##            sigmas.stab <- F
             ##            grand.iter  <- 0
             ##            while ((!sigmas.stab) & (grand.iter < 5)) {
@@ -153,7 +223,7 @@ get.init.val <- function(X, R, K, df.constr, sigma.constr, init = "smart-random"
 }
 
 ## Run EM.
-run.EM <- function(init, nclusters, X, miss.grp, A, Ru, ps, max.iter, tol, convergence, sigma.constr, df.constr, approx.df, marginalization, npar) {
+run.EM <- function(init, nclusters, X, miss.grp, A, Ru, ps, max.iter, tol, convergence, sigma.constr, df.constr, approx.df, marginalization, npar, labeled_obs, class_indicators) {
     ##print("entering run.EM")
     old <- init
     del <- 1e6 # Initialize convergence holder.
@@ -162,7 +232,7 @@ run.EM <- function(init, nclusters, X, miss.grp, A, Ru, ps, max.iter, tol, conve
     LLs <- c(sum(log(rowSums(initL))), rep(NA, max.iter)) # Store loglikelihood at each iteration.
     while (del > tol) {
         iter <- iter + 1
-        new <- EM_iter(old, X, A, Ru, miss.grp, ps, sigma.constr, df.constr, approx.df, marginalization)
+        new <- EM_iter(old, X, A, Ru, miss.grp, ps, sigma.constr, df.constr, approx.df, marginalization, labeled_obs, class_indicators)
         newL <- sapply(1:nclusters, function(k) {new$pi[k] * h(X, new$mu[k,], new$Sigma[,,k], new$nu[k], miss.grp, Ru)})
         newLLn <- sum(log(rowSums(newL)))
         ##    cat("ITER =", iter, "newLLn" = newLLn, "\n")
@@ -187,7 +257,7 @@ run.EM <- function(init, nclusters, X, miss.grp, A, Ru, ps, max.iter, tol, conve
         if (iter == max.iter) break
     }
                                         # Final posterior probabilities of cluster membership
-    Zs <- up_Z(X, new$mu, new$Sigma, new$nu, new$pi, miss.grp, Ru)
+    Zs <- up_Z(X, new$mu, new$Sigma, new$nu, new$pi, miss.grp, Ru, labeled_obs, class_indicators)
     BIC <- 2*LLs[iter+1] - npar*log(nrow(X))
     res <- list(estimates = new,
                 iterations = iter,
@@ -200,12 +270,12 @@ run.EM <- function(init, nclusters, X, miss.grp, A, Ru, ps, max.iter, tol, conve
 }
 
 ## Run an initialization with short em -- don't keep track of LL, BIC, etc to save time
-run.em <- function(nclusters, X, miss.grp, A, R, Ru, ps, niter, sigma.constr, df.constr, marginalization, init = "uniform") {
-  old <- get.init.val(X, R, nclusters, df.constr, sigma.constr, init)
+run.em <- function(nclusters, X, miss.grp, A, R, Ru, ps, niter, sigma.constr, df.constr, marginalization, init = "uniform", labeled_obs, class_indicators) {
+  old <- get.init.val(X, R, nclusters, df.constr, sigma.constr, init, labeled_obs, class_indicators)
   iter <- 0
   while (iter <= niter) {
     iter <- iter + 1
-    new <- EM_iter(old, X, A, Ru, miss.grp, ps, sigma.constr, df.constr, approx.df = TRUE, marginalization)
+    new <- EM_iter(old, X, A, Ru, miss.grp, ps, sigma.constr, df.constr, approx.df = TRUE, marginalization, labeled_obs, class_indicators)
     old <- new
   }
   # Final loglik

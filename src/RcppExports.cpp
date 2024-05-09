@@ -84,8 +84,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // up_Z
-arma::mat up_Z(arma::mat x, arma::mat mus, NumericVector sigmas, arma::vec nus, arma::vec pis, arma::vec grp, arma::umat Ru);
-RcppExport SEXP _MixtClust_up_Z(SEXP xSEXP, SEXP musSEXP, SEXP sigmasSEXP, SEXP nusSEXP, SEXP pisSEXP, SEXP grpSEXP, SEXP RuSEXP) {
+arma::mat up_Z(arma::mat x, arma::mat mus, NumericVector sigmas, arma::vec nus, arma::vec pis, arma::vec grp, arma::umat Ru, arma::vec labeled_obs, arma::mat class_indicators);
+RcppExport SEXP _MixtClust_up_Z(SEXP xSEXP, SEXP musSEXP, SEXP sigmasSEXP, SEXP nusSEXP, SEXP pisSEXP, SEXP grpSEXP, SEXP RuSEXP, SEXP labeled_obsSEXP, SEXP class_indicatorsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -96,7 +96,9 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< arma::vec >::type pis(pisSEXP);
     Rcpp::traits::input_parameter< arma::vec >::type grp(grpSEXP);
     Rcpp::traits::input_parameter< arma::umat >::type Ru(RuSEXP);
-    rcpp_result_gen = Rcpp::wrap(up_Z(x, mus, sigmas, nus, pis, grp, Ru));
+    Rcpp::traits::input_parameter< arma::vec >::type labeled_obs(labeled_obsSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type class_indicators(class_indicatorsSEXP);
+    rcpp_result_gen = Rcpp::wrap(up_Z(x, mus, sigmas, nus, pis, grp, Ru, labeled_obs, class_indicators));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -274,7 +276,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_MixtClust_mahalanobis", (DL_FUNC) &_MixtClust_mahalanobis, 4},
     {"_MixtClust_dMVT", (DL_FUNC) &_MixtClust_dMVT, 6},
     {"_MixtClust_h", (DL_FUNC) &_MixtClust_h, 6},
-    {"_MixtClust_up_Z", (DL_FUNC) &_MixtClust_up_Z, 7},
+    {"_MixtClust_up_Z", (DL_FUNC) &_MixtClust_up_Z, 9},
     {"_MixtClust_up_W", (DL_FUNC) &_MixtClust_up_W, 6},
     {"_MixtClust_up_pi", (DL_FUNC) &_MixtClust_up_pi, 1},
     {"_MixtClust_up_mu", (DL_FUNC) &_MixtClust_up_mu, 4},

@@ -226,7 +226,8 @@ arma::vec h(arma::mat x, arma::vec mu, arma::mat sigma, double nu, arma::vec grp
 
 // E-step: update Z.
 // [[Rcpp::export]]
-arma::mat up_Z(arma::mat x, arma::mat mus, NumericVector sigmas, arma::vec nus, arma::vec pis, arma::vec grp, arma::umat Ru) {
+arma::mat up_Z(arma::mat x, arma::mat mus, NumericVector sigmas, arma::vec nus, arma::vec pis, arma::vec grp, arma::umat Ru,
+    arma::vec labeled_obs, arma::mat class_indicators) {
   int K = mus.n_rows, n = x.n_rows, p = x.n_cols;
   arma::cube Sigmas = to_array(sigmas, K, p);
   arma::mat ans(n, K);
@@ -238,7 +239,11 @@ arma::mat up_Z(arma::mat x, arma::mat mus, NumericVector sigmas, arma::vec nus, 
     for (int k=0; k<K; k++) {
       rowsum += ans(i,k);
     }
-    ans.row(i) = ans.row(i) / rowsum;
+    // only update the Z's for unlabeled observations
+    if (labeled_obs(i))
+      ans.row(i) = class_indicators.row(i);
+    else
+      ans.row(i) = ans.row(i) / rowsum;
   }
   return ans;
 }

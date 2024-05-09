@@ -34,6 +34,8 @@
 #' @param emEM.args A named list of options utilized if \code{initial.values =
 #'   "emEM"} (see details).
 #' @param scaled Logical variable that indicates if computations for multi-dimensional datasets should be done after scaling the dataset. Note that the resulting parameters are scaled back and so should not theoretically have much effect on the performance, except to potentially offer stability in numerical computations.
+#' @param labels Numeric vector of size \eqn{n} which contains the known labels for the data, to be used in semi-supervised
+#'    clustering. Labels of unknown observations should be \code{"NA"}.
 #'
 #' @details
 #'
@@ -139,6 +141,7 @@ MixtClust <- function(x,
                       method = "marginalization",
                       verbose = TRUE,
                       scaled = FALSE,
+                      labels = rep(NA, nrow(x)),
                       emEM.args = list(nstarts = sqrt(nclusters*prod(dim(x))), em.iter = 1, nbest = 10))
 {
   mf <- match.call(expand.dots = FALSE)
@@ -219,6 +222,14 @@ MixtClust <- function(x,
   miss.grp <- apply(R, 1, row_match, R.unique)
   Ru <- 1*!R.unique
 
+  # Set class indicators
+  # recode labels to start at 1 and increase sequentially
+  labels <- as.numeric(as.factor(labels))
+  class_indicators <- matrix(0, nrow = nrow(x), ncol = nclusters)
+  for (i in 1:nclusters) class_indicators[labels == i, i] <- 1
+
+  labeled_observation <- !is.na(labels)
+
   #######################################################
   # Initialize
   #######################################################
@@ -246,7 +257,7 @@ MixtClust <- function(x,
         nclusters, X,
         miss.grp, A, R, Ru, ps,
         em.iter, sigma.constr, df.constr, marginalization,
-        init = "smart-random")
+        init = "smart-random", labeled_observation, class_indicators)
       shortEMll[st] <- tmp$loglik
       # save estimates if candidates for nbest logliks
       if (st <= nbest) {
@@ -270,7 +281,7 @@ MixtClust <- function(x,
       nclusters, X,
       miss.grp, A, R, Ru, ps, em.iter,
       sigma.constr, df.constr,
-      marginalization, init = "kmeans")
+      marginalization, init = "kmeans", labeled_observation, class_indicators)
     em.time <- NA
     initial.values <- list(initial.values$estimates)
   } else if (is(initial.values, "list")) {
@@ -358,7 +369,7 @@ MixtClust <- function(x,
       miss.grp, A, Ru, ps,
       max.iter, tol, convergence,
       sigma.constr, df.constr,
-      approx.df, marginalization, npar)
+      approx.df, marginalization, npar, labeled_observation, class_indicators)
   }
   EM.time <- proc.time() - ptm
 

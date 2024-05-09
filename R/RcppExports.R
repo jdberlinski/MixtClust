@@ -94,8 +94,8 @@ h <- function(x, mu, sigma, nu, grp, Ru) {
     .Call(`_MixtClust_h`, x, mu, sigma, nu, grp, Ru)
 }
 
-up_Z <- function(x, mus, sigmas, nus, pis, grp, Ru) {
-    .Call(`_MixtClust_up_Z`, x, mus, sigmas, nus, pis, grp, Ru)
+up_Z <- function(x, mus, sigmas, nus, pis, grp, Ru, labeled_obs, class_indicators) {
+    .Call(`_MixtClust_up_Z`, x, mus, sigmas, nus, pis, grp, Ru, labeled_obs, class_indicators)
 }
 
 up_W <- function(x, mus, sigmas, nus, grp, Ru) {
