@@ -27,7 +27,7 @@ mus <- init$mu; Sigmas <- init$Sigma; pis <- init$pi; nus <- init$nu
 context("Density")
 
 test_that("Mahalanobis distance", {
-  expect_equivalent(stats::mahalanobis(x = Y, center = mus[k,], cov = Sigmas[,,k]), 
+  expect_equivalent(stats::mahalanobis(x = Y, center = mus[k,], cov = Sigmas[,,k]),
                     as.numeric(mahalanobis(x = Y, mu = mus[k,], sigma = Sigmas[,,k])))
 })
 
@@ -36,7 +36,7 @@ test_that("Array-cube conversion", {
 })
 
 test_that("mvt t density", {
-  expect_equivalent(as.numeric(dMVT(Y, mus[k,], Sigmas[,,k], nus[k])), 
+  expect_equivalent(as.numeric(dMVT(Y, mus[k,], Sigmas[,,k], nus[k])),
                     mvnfast::dmvt(Y, mus[k,], Sigmas[,,k], nus[k]))
 })
 
@@ -49,9 +49,9 @@ test_that("Observed mvt t density", {
 ###########################################################################
 context("E steps")
 
-ZZ <- MixtClust:::up_Z(Y, mus, Sigmas, nus, pis, miss.grp, Ru)
+ZZ <- MixtClust:::up_Z(Y, mus, Sigmas, nus, pis, miss.grp, Ru, rep(F, n), matrix(0, nrow = n, ncol = k))
 test_that("E-step Z", {
-  expect_equivalent(rowSums(ZZ), 
+  expect_equivalent(rowSums(ZZ),
                     rep(1, n))
 })
 
@@ -75,19 +75,19 @@ SOiOEOO <- lapply(1:k, function(kk) MixtClust:::SOiOEOOk(Sigmas[,,kk], Ru))
 xhat <- lapply(1:k, function(kk) MixtClust:::xhatk(Y, mus[kk,], miss.grp, M, SOiOEOO[[kk]]))
 mus3 <- MixtClust:::up_mu_Lin(p, ZZ, WW, xhat)
 test_that("Lin's method imputation", {
-  expect_identical(sapply(1:k, function(kk) all.equal(Y[!R], xhat[[kk]][!R])), 
+  expect_identical(sapply(1:k, function(kk) all.equal(Y[!R], xhat[[kk]][!R])),
                    rep(TRUE, k))
 })
 
 test_that("M-step sigma (marginalization)", {
-  expect_equivalent(MixtClust:::up_Sigma(Y, ZZ, WW, mus, A, FALSE),
+  expect_equivalent(MixtClust:::up_Sigma(Y, ZZ, WW, mus, A, "VVV"),
                     MixtClust:::up_SigmaR(Y, ZZ, WW, mus, A, FALSE))
-  
+
 })
 
-SigmasC <- MixtClust:::up_Sigma(Y, ZZ, WW, mus, A, TRUE)
+SigmasC <- MixtClust:::up_Sigma(Y, ZZ, WW, mus, A, "EEE")
 test_that("M-step sigma constrained (marginalization)", {
-  expect_identical(sapply(2:k, function(kk) all.equal(SigmasC[,,1], SigmasC[,,kk])), 
+  expect_identical(sapply(2:k, function(kk) all.equal(SigmasC[,,1], SigmasC[,,kk])),
                    rep(TRUE, k-1))
 })
 
@@ -95,7 +95,7 @@ test_that("M-step sigma constrained (marginalization)", {
 test_that("Ruegree of freedom constraints", {
   expect_true(length(unique(MixtClust:::up_nu(ZZ, WW, nus, ps, TRUE, FALSE))) == 1)
   expect_true(length(unique(MixtClust:::up_nu(ZZ, WW, nus, ps, TRUE, TRUE))) == 1)
-  
+
 })
 
 
@@ -103,15 +103,15 @@ test_that("Ruegree of freedom constraints", {
 context("Agreement on complete cases")
 # Compare marginalization to full EM updates for mu, sigma w/ CC (full data d)
 gd <- rep(1, n); Rud <- matrix(1, 1, p); Ad <- matrix(1, n, p)
-ZZd <- MixtClust:::up_Z(as.matrix(d), mus, Sigmas, nus, pis, gd, Rud)
+ZZd <- MixtClust:::up_Z(as.matrix(d), mus, Sigmas, nus, pis, gd, Rud, rep(F, n), matrix(0, nrow = n, ncol = k))
 WWd <- MixtClust:::up_W(as.matrix(d), mus, Sigmas, nus, gd, Rud)
 mud1 <- MixtClust:::up_mu(as.matrix(d), ZZd, WWd, Ad)
 SOiOEOOd <- lapply(1:k, function(kk) MixtClust:::SOiOEOOk(Sigmas[,,kk], Rud))
 xhatd <- lapply(1:k, function(kk) MixtClust:::xhatk(as.matrix(d), mus[kk,], gd, 1, SOiOEOOd[[kk]]))
 mud2 <- MixtClust:::up_mu_Lin(p, ZZd, WWd, xhatd)
-Sigmasd1 <- MixtClust:::up_Sigma(as.matrix(d), ZZd, WWd, mud1, Ad, FALSE)
-Sigmasd2 <- sapply(1:k, 
-                   function(kk) MixtClust:::up_Sigmak_Lin(1, ZZd[,kk], WWd[,kk], mud2[kk,], Sigmas[,,kk], xhatd[[kk]], gd, SOiOEOOd[[kk]]), 
+Sigmasd1 <- MixtClust:::up_Sigma(as.matrix(d), ZZd, WWd, mud1, Ad, "VVV")
+Sigmasd2 <- sapply(1:k,
+                   function(kk) MixtClust:::up_Sigmak_Lin(1, ZZd[,kk], WWd[,kk], mud2[kk,], Sigmas[,,kk], xhatd[[kk]], gd, SOiOEOOd[[kk]]),
                    simplify = 'array')
 test_that("Mu updates on CC: fullEM vs marginalization", {
   expect_equivalent(mud1, mud2)
