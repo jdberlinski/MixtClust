@@ -182,6 +182,10 @@ MixtClust <- function(x,
     }
   }
 
+  if (length(labels) != nrow(x))
+    stop("length of `labels` does not match number of rows in data")
+
+
 
   #######################################################
   # Set up data
@@ -302,6 +306,8 @@ MixtClust <- function(x,
     em.time <- NA
     initial.values <- list(initial.values)
   } else {
+    if (!all.equal(labels[labeled_observation], initial.values[labeled_observation]))
+      stop("supplied `labels` do not agree with starting values `initial.values`")
     emEM <- FALSE
     init.ids <- initial.values
     if (length(init.ids) != nrow(X))

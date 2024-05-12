@@ -22,6 +22,16 @@ Ru <- 1*!R.unique
 init <- MixtClust:::get.init.val(Y, R, k, FALSE, FALSE)
 mus <- init$mu; Sigmas <- init$Sigma; pis <- init$pi; nus <- init$nu
 
+###########################################################################
+context("Correctly error")
+test_that("Incorrect number of labels", {
+  expect_error(MixtClust::MixtClust(d, nclusters = k, labels = 1))
+})
+
+test_that("labels and init mismatch", {
+  expect_error(MixtClust::MixtClust(d, nclusters = k, labels = rep(1, n), initial.values = c(1, rep(2, n - 1))))
+})
+
 
 ###########################################################################
 context("Density")
