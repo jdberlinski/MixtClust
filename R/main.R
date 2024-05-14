@@ -415,5 +415,6 @@ MixtClust <- function(x,
   o$total.time <- EM.time + em.time
   o$call <- mf
   o$npar <- npar
+  o$sigma.constr <- sigma.constr
   o
 }
