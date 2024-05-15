@@ -83,7 +83,10 @@ get.init.val <- function(X, R, K, df.constr, sigma.constr, init = "smart-random"
       nks_obs <- numeric(M)
       pis_obs <- numeric(M)
       for (k in 1:M) {
-        Sigmas_obs[, , k] <- cov(y_obs[obs_class == k, ], use = "pairwise.complete.obs")
+        # rare case: single observation in a labeled cluster
+        if (length(obs_class == k) > 1)
+          Sigmas_obs[, , k] <- cov(y_obs[obs_class == k, ], use = "pairwise.complete.obs")
+        Sigmas_obs[, , k] <- Sigmas_obs[, , k] + 1e-3 * diag(p)
         mus_obs[k, ] <- colMeans(y_obs[obs_class == k, ], na.rm = T)
         nks_obs[k] <- sum(obs_class == k)
         pis_obs[k] <- sum(obs_class == k) / n
