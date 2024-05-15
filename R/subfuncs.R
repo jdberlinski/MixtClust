@@ -84,7 +84,7 @@ get.init.val <- function(X, R, K, df.constr, sigma.constr, init = "smart-random"
       pis_obs <- numeric(M)
       for (k in 1:M) {
         # rare case: single observation in a labeled cluster
-        if (length(obs_class == k) > 1)
+        if (sum(obs_class == k) > 1)
           Sigmas_obs[, , k] <- cov(y_obs[obs_class == k, ], use = "pairwise.complete.obs")
         Sigmas_obs[, , k] <- Sigmas_obs[, , k] + 1e-3 * diag(p)
         mus_obs[k, ] <- colMeans(y_obs[obs_class == k, ], na.rm = T)
