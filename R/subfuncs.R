@@ -87,7 +87,10 @@ get.init.val <- function(X, R, K, df.constr, sigma.constr, init = "smart-random"
         if (sum(obs_class == k) > 1)
           Sigmas_obs[, , k] <- cov(y_obs[obs_class == k, ], use = "pairwise.complete.obs")
         Sigmas_obs[, , k] <- Sigmas_obs[, , k] + 1e-3 * diag(p)
-        mus_obs[k, ] <- colMeans(y_obs[obs_class == k, ], na.rm = T)
+        if (sum(obs_class == k) > 1)
+          mus_obs[k, ] <- colMeans(y_obs[obs_class == k, ], na.rm = T)
+        else
+          mus_obs[k, !is.na(y_obs[obs_class == k])] <- y_obs[obs_class == k, !is.na(y_obs[obs_class == k])]
         nks_obs[k] <- sum(obs_class == k)
         pis_obs[k] <- sum(obs_class == k) / n
       }
