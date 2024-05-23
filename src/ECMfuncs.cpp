@@ -945,6 +945,16 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
     }
 
   }
+  // check if covariance is close to singular, if it is add a bit to the diagonal
+  // the only effect this should have is for cases when there is a degenerate solution,
+  // which (i hope) is thrown out anyway
+  // TODO: maybe delet
+  double r;
+  for (int k = 0; k < K; k++) {
+    r = arma::rcond(Sigmas.slice(k));
+    if (r < 1e-16)
+      Sigmas.slice(k) += 1e-3 * arma::eye(p, p);
+  }
   return Sigmas;
 }
 

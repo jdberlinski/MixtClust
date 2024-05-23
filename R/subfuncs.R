@@ -265,7 +265,37 @@ run.EM <- function(init, nclusters, X, miss.grp, A, Ru, ps, max.iter, tol, conve
         } else {
             stop('Specified convergence criterion not recognized.')
         }
+        if (is.infinite(newLLn)) {
+          warning(paste0("Log-likelihood is infinite, possible poor initial conditions. Terminating run."))
+          newLLn <- -Inf
+          LLs[iter+1] <- -Inf
+          return(
+            list(
+              estimates = new,
+              iterations = iter,
+              Zs = matrix(0, nrow = nrow(X), ncol = nclusters),
+              loglik = LLs[2:(iter+1)],
+              bic = -Inf
+            )
+          )
+          # break
+        }
         if (iter == max.iter) break
+        # TODO: remove, used for debugging
+        # tryCatch(
+        #   if(del > tol) { },
+        #   error = function(e) {
+        #     print("`X` vector <---------------------------------------------------------")
+        #     print(X)
+        #     print("implied `Z` vector <---------------------------------------------------------")
+        #     print(up_Z(X, new$mu, new$Sigma, new$nu, new$pi, miss.grp, Ru, labeled_obs, class_indicators))
+        #     print("`new` vector <---------------------------------------------------------")
+        #     print(new)
+        #     print("new `LL`  <---------------------------------------------------------")
+        #     print(newLLn)
+        #   },
+        #   finally = next
+        # )
     }
                                         # Final posterior probabilities of cluster membership
     Zs <- up_Z(X, new$mu, new$Sigma, new$nu, new$pi, miss.grp, Ru, labeled_obs, class_indicators)
