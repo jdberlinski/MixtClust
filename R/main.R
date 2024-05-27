@@ -142,7 +142,7 @@ MixtClust <- function(x,
                       verbose = TRUE,
                       scaled = FALSE,
                       labels = rep(NA, nrow(x)),
-                      emEM.args = list(nstarts = sqrt(nclusters*prod(dim(x))), em.iter = 1, nbest = 10))
+                      emEM.args = list(nstarts = round(sqrt(nclusters*prod(dim(x)))), em.iter = 1, nbest = 10))
 {
   mf <- match.call(expand.dots = FALSE)
   #######################################################
