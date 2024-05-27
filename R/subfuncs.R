@@ -150,14 +150,6 @@ get.init.val <- function(X, R, K, df.constr, sigma.constr, init = "smart-random"
             pis <- 1
             mus <- matrix(colMeans(y,na.rm=T), nrow = 1)
         } else {
-          # TODO: This should be done only on the unknown observations, with the number of clusters initialized being
-          # the difference between the number of observed clusters and the total number of clusters
-          #   - What if these are equal, and there are less than p-1 observations in one of the observed clusters?
-          #   - More speficically, if I have M groups in the known labels, what if I have less than (K - M)(p + 1)
-          #   unlabeled observations?
-            ##            sigmas.stab <- F
-            ##            grand.iter  <- 0
-            ##            while ((!sigmas.stab) & (grand.iter < 5)) {
             minnks <- 0
             while (minnks <= p) {
                 ## Let us at least put in at least p + 1 observation pairs in each group
