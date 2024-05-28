@@ -1721,3 +1721,116 @@ double Q2(arma::mat x, arma::mat z, arma::mat w, NumericVector sigmas, arma::mat
   }
   return out;
 }
+
+// modification of k(m)means++ to allow for existing means chosen from the labeled observations
+//           x : the data with unobserved labels
+//       means : vector of existing means (may be empty)
+// known_means : number of rows in `means` which come from labeled observations
+// [[Rcpp::export]]
+arma::mat get_init_centers(arma::mat x, arma::mat means, size_t known_means) {
+  int n, p, nclusters, divisor;
+  size_t i, j, k;
+  double diff, total_weight, u, random_tracker, new_weight;
+
+  n = x.n_rows;
+  p = x.n_cols;
+  nclusters = means.n_rows;
+
+  arma::vec weight(n, arma::fill::zeros);
+  // calculate distance between each observation and the current means
+  for (i = 0; i < n; i++) {
+    for (k = 0; k < known_means; k++) {
+      new_weight = 0.0;
+      divisor = 0;
+      for (j = 0; j < p; j++) {
+        if (isfinite(x(i, j)) && isfinite(means(k, j))) {
+          divisor++;
+          diff = x(i, j) - means(k, j);
+          // weight(i) += diff * diff;
+          new_weight += diff * diff;
+        }
+      }
+      if (divisor > 1)
+        new_weight /= (double) divisor;
+        // weight(i) /= (double) divisor;
+      if (k == 0 || new_weight < weight(i))
+        weight(i) = new_weight;
+    }
+  }
+
+  // choose remaining means
+  for (k = known_means; k < nclusters; k++) {
+    total_weight = 0.0;
+    for (i = 0; i < n; i++)
+      total_weight += weight(i);
+
+    // select observation with probability proportional to total distance
+    u = R::runif(0, 1);
+    random_tracker = 0.0;
+    for (i = 0; i < n; i++) {
+      random_tracker += weight(i) / total_weight;
+      if (random_tracker >= u)
+        break;
+    }
+
+    // set new cluster mean to chosen observation
+    means.row(k) = x.row(i);
+
+    // recalculate weights if necessary
+    if (k + 1 < nclusters) {
+      for (i = 0; i < n; i++) {
+        new_weight = 0.0;
+        divisor = 0;
+        for (j = 0; j < p; j++) {
+          if (isfinite(x(i, j)) && isfinite(means(k, j))) {
+            divisor++;
+            diff = x(i, j) - means(k, j);
+            new_weight += diff * diff;
+          }
+        }
+        if (divisor > 1)
+          new_weight /= (double) divisor;
+        if (new_weight < weight(i))
+          weight(i) = new_weight;
+      }
+    }
+  }
+
+  return(means);
+}
+
+// [[Rcpp::export]]
+arma::vec assign_initial_partitions(arma::mat x, arma::mat means) {
+  int n, p, nclusters, divisor;
+  size_t i, j, k;
+  double diff, dist, smallest_dist;
+
+  n = x.n_rows;
+  p = x.n_cols;
+  nclusters = means.n_rows;
+  arma::vec cluster(n, arma::fill::zeros);
+
+  // assign each point to its closest center
+  for (i = 0; i < n; i++) {
+    smallest_dist = 0.0;
+    for (k = 0; k < nclusters; k++) {
+      divisor = 0;
+      dist = 0.0;
+      for (j = 0; j < p; j++) {
+        if (isfinite(x(i, j)) && isfinite(means(k, j))) {
+          divisor++;
+          diff = x(i, j) - means(k, j);
+          dist += diff * diff;
+        }
+      }
+      if (divisor > 1)
+        dist /= (double) divisor;
+      if (k == 0 || dist < smallest_dist) {
+        smallest_dist = dist;
+        cluster(i) = k;
+      }
+    }
+  }
+
+  return(cluster);
+}

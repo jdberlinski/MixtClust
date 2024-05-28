@@ -142,3 +142,11 @@ Q2 <- function(x, z, w, sigmas, mus, grp, Ru) {
     .Call(`_MixtClust_Q2`, x, z, w, sigmas, mus, grp, Ru)
 }
 
+get_init_centers <- function(x, means, known_means) {
+    .Call(`_MixtClust_get_init_centers`, x, means, known_means)
+}
+
+assign_initial_partitions <- function(x, means) {
+    .Call(`_MixtClust_assign_initial_partitions`, x, means)
+}
+

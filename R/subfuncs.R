@@ -106,6 +106,18 @@ get.init.val <- function(X, R, K, df.constr, sigma.constr, init = "smart-random"
         minnks <- 0
         while (minnks <= p) {
           ## Let us at least put in at least p + 1 observation pairs in each group
+
+          # testing -------
+          # new_means <- get_init_centers(y_unobs, rbind(mus_obs, matrix(0, nrow = K - M, ncol = p)), M)
+          # assignments <- as.numeric(assign_initial_partitions(y_unobs, new_means) + 1)
+          # print("--- mus_obs -----------------------------------")
+          # print(mus_obs)
+          # print("--- new_means ---------------------------------")
+          # print(new_means)
+          # print("--- assignments -------------------------------")
+          # print(assignments)
+          # end testing ---
+
           res <- kmmeans::kmmeans(data = as.data.frame(y_unobs), K = K - M, n.init = 1, kmmns.iter = 0)
           res$partition <- res$partition + 1
           minks <- sapply(1:(K - M), function(x)(min(crossprod(!R_unobs[res$partition==x,]))))

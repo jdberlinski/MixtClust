@@ -269,6 +269,31 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// get_init_centers
+arma::mat get_init_centers(arma::mat x, arma::mat means, size_t known_means);
+RcppExport SEXP _MixtClust_get_init_centers(SEXP xSEXP, SEXP meansSEXP, SEXP known_meansSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type x(xSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type means(meansSEXP);
+    Rcpp::traits::input_parameter< size_t >::type known_means(known_meansSEXP);
+    rcpp_result_gen = Rcpp::wrap(get_init_centers(x, means, known_means));
+    return rcpp_result_gen;
+END_RCPP
+}
+// assign_initial_partitions
+arma::vec assign_initial_partitions(arma::mat x, arma::mat means);
+RcppExport SEXP _MixtClust_assign_initial_partitions(SEXP xSEXP, SEXP meansSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type x(xSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type means(meansSEXP);
+    rcpp_result_gen = Rcpp::wrap(assign_initial_partitions(x, means));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_MixtClust_to_array", (DL_FUNC) &_MixtClust_to_array, 3},
@@ -288,6 +313,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_MixtClust_up_Sigmak_Lin", (DL_FUNC) &_MixtClust_up_Sigmak_Lin, 8},
     {"_MixtClust_up_Sigma_Lin", (DL_FUNC) &_MixtClust_up_Sigma_Lin, 8},
     {"_MixtClust_Q2", (DL_FUNC) &_MixtClust_Q2, 7},
+    {"_MixtClust_get_init_centers", (DL_FUNC) &_MixtClust_get_init_centers, 3},
+    {"_MixtClust_assign_initial_partitions", (DL_FUNC) &_MixtClust_assign_initial_partitions, 2},
     {NULL, NULL, 0}
 };
 
