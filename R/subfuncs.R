@@ -72,83 +72,131 @@ get.init.val <- function(X, R, K, df.constr, sigma.constr, init = "smart-random"
       R_unobs <- R[!labeled_obs, ]
       y_unobs[R_unobs] <- NA
 
+      y <- X
+      y[R] <- NA
+
       obs_class <- apply(class_indicators[labeled_obs, ], 1, which.max)
       M <- max(obs_class)
 
       Sigmas <- array(0, dim=c(p, p, K))
 
-      # first, initialize the observed classes
-      Sigmas_obs <- array(0, dim = c(p, p, M))
-      mus_obs <- matrix(0, nrow = M, ncol = p)
-      nks_obs <- numeric(M)
-      pis_obs <- numeric(M)
+      # -- new code ----------------------------------------------------------------------------------------------------
+      mus <- matrix(NA, nrow = K, ncol = p)
+
+      # estimate Sigma and mu for the M observed clusters
       for (k in 1:M) {
-        # rare case: single observation in a labeled cluster
+        # check if there are enough observations to estimate a covariance matrix
+        # (this still may not be positive semi-definite)
+        if (min(crossprod(!R_obs[obs_class == k, ])) > p)
+          Sigmas[, , k] <- cov(y_obs[obs_class == k, ], use = "pairwise.complete.obs") + 1e-3 * diag(p)
+
         if (sum(obs_class == k) > 1)
-          Sigmas_obs[, , k] <- cov(y_obs[obs_class == k, ], use = "pairwise.complete.obs")
-        Sigmas_obs[, , k] <- Sigmas_obs[, , k] + 1e-3 * diag(p)
-        if (sum(obs_class == k) > 1)
-          mus_obs[k, ] <- colMeans(y_obs[obs_class == k, ], na.rm = T)
+          mus[k, ] <- colMeans(y_obs[obs_class == k, ], na.rm = TRUE)
         else
-          mus_obs[k, !is.na(y_obs[obs_class == k])] <- y_obs[obs_class == k, !is.na(y_obs[obs_class == k])]
-        nks_obs[k] <- sum(obs_class == k)
-        pis_obs[k] <- sum(obs_class == k) / n
+          mus[k, ] <- y_obs[obs_class == k, ]
       }
 
-      # now, initialize the remaining classes using the cases with unobserved labels
-      Sigmas_unobs <- array(0, dim = c(p, p, K - M))
-      if ((K - 1) == M) {
-        Sigmas_unobs[, , 1] <- cov(y_unobs, use = "pairwise.complete.obs")
-        mus_unobs <- matrix(colMeans(y_unobs, na.rm = T), nrow = 1)
-        nks_unobs <- nrow(y_unobs)
-        pis_unobs <- nrow(y_unobs) / n
-      } else if (K != M) {
-        minnks <- 0
-        while (minnks <= p) {
-          ## Let us at least put in at least p + 1 observation pairs in each group
+      # pick the remaining K - M means from the unlabeled observations, assuring that there are at least p + 1
+      # observations in _every_ cluster
+      min_nk <- 0
+      full_init_labels <- rep(NA, n)
+      full_init_labels[labeled_obs] <- obs_class
+      while (min_nk <= p) {
+        mus <- get_init_centers(y_unobs, mus, M)
+        unobs_labels <- as.numeric(assign_initial_partitions(y_unobs, mus) + 1)
+        full_init_labels[!labeled_obs] <- unobs_labels
 
-          # testing -------
-          # new_means <- get_init_centers(y_unobs, rbind(mus_obs, matrix(0, nrow = K - M, ncol = p)), M)
-          # assignments <- as.numeric(assign_initial_partitions(y_unobs, new_means) + 1)
-          # print("--- mus_obs -----------------------------------")
-          # print(mus_obs)
-          # print("--- new_means ---------------------------------")
-          # print(new_means)
-          # print("--- assignments -------------------------------")
-          # print(assignments)
-          # end testing ---
-
-          res <- kmmeans::kmmeans(data = as.data.frame(y_unobs), K = K - M, n.init = 1, kmmns.iter = 0)
-          res$partition <- res$partition + 1
-          minks <- sapply(1:(K - M), function(x)(min(crossprod(!R_unobs[res$partition==x,]))))
-          minnks <- min(minks)
-        }
-
-        nks_unobs <- table(res$partition)
-        pis_unobs <- nks_unobs / n
-        mus_unobs <- res$centers
-        for (k in 1:(K - M)) {
-          Sigmas_unobs[,,k] <- cov(y_unobs[res$partition==k,], use = "pairwise.complete.obs")
-          Sigmas_unobs[,,k]  <- Sigmas_unobs[,,k] + 1e-3 * diag(p)
-        }
-      } else {
-        # if K == M, we don't need to consider the unobserved cases for initialization
-        nks_unobs <- NULL
-        pis_unobs <- NULL
-        mus_unobs <- NULL
+        min_nks <- sapply(1:K, function(x) min(crossprod(!R[full_init_labels == x , ])))
+        min_nk <- min(min_nks)
       }
 
-      # combine results
+      # update required values
       for (k in 1:K) {
-        if (k <= M)
-          Sigmas[, , k] <- Sigmas_obs[, , k]
-        else
-          Sigmas[, , k] <- Sigmas_unobs[, , k - M]
+        # only update covariance if there weren't enough known observations in that cluster
+        if (all(Sigmas[, , k] == 0) || k > M)
+          Sigmas[, , k] <- cov(y[full_init_labels == k, ], use = "pairwise.complete.obs") + 1e-3 * diag(p)
+        # only update mean if there is an NA value
+        if (anyNA(mus[k, ]))
+          mus[k, ] <- colMeans(y[full_init_labels == k, ], na.rm = TRUE)
       }
 
-      mus <- rbind(mus_obs, mus_unobs)
-      nks <- c(nks_unobs, nks_obs)
-      pis <- c(pis_unobs, pis_obs)
+      nks <- table(full_init_labels)
+      pis <- nks / n
+
+      # ------- old code -----------------------------------------------------------------------------------------------
+      # # first, initialize the observed classes
+      # Sigmas_obs <- array(0, dim = c(p, p, M))
+      # mus_obs <- matrix(0, nrow = M, ncol = p)
+      # nks_obs <- numeric(M)
+      # pis_obs <- numeric(M)
+      # for (k in 1:M) {
+      #   # rare case: single observation in a labeled cluster
+      #   if (sum(obs_class == k) > 1)
+      #     Sigmas_obs[, , k] <- cov(y_obs[obs_class == k, ], use = "pairwise.complete.obs")
+      #   Sigmas_obs[, , k] <- Sigmas_obs[, , k] + 1e-3 * diag(p)
+      #   if (sum(obs_class == k) > 1)
+      #     mus_obs[k, ] <- colMeans(y_obs[obs_class == k, ], na.rm = T)
+      #   else
+      #     mus_obs[k, !is.na(y_obs[obs_class == k])] <- y_obs[obs_class == k, !is.na(y_obs[obs_class == k])]
+      #   nks_obs[k] <- sum(obs_class == k)
+      #   pis_obs[k] <- sum(obs_class == k) / n
+      # }
+
+      # # now, initialize the remaining classes using the cases with unobserved labels
+      # Sigmas_unobs <- array(0, dim = c(p, p, K - M))
+      # if ((K - 1) == M) {
+      #   Sigmas_unobs[, , 1] <- cov(y_unobs, use = "pairwise.complete.obs")
+      #   mus_unobs <- matrix(colMeans(y_unobs, na.rm = T), nrow = 1)
+      #   nks_unobs <- nrow(y_unobs)
+      #   pis_unobs <- nrow(y_unobs) / n
+      # } else if (K != M) {
+      #   minnks <- 0
+      #   while (minnks <= p) {
+      #     ## Let us at least put in at least p + 1 observation pairs in each group
+
+      #     # testing -------
+      #     # new_means <- get_init_centers(y_unobs, rbind(mus_obs, matrix(0, nrow = K - M, ncol = p)), M)
+      #     # assignments <- as.numeric(assign_initial_partitions(y_unobs, new_means) + 1)
+      #     # print("--- mus_obs -----------------------------------")
+      #     # print(mus_obs)
+      #     # print("--- new_means ---------------------------------")
+      #     # print(new_means)
+      #     # print("--- assignments -------------------------------")
+      #     # print(assignments)
+      #     # end testing ---
+
+      #     res <- kmmeans::kmmeans(data = as.data.frame(y_unobs), K = K - M, n.init = 1, kmmns.iter = 0)
+      #     res$partition <- res$partition + 1
+      #     minks <- sapply(1:(K - M), function(x)(min(crossprod(!R_unobs[res$partition==x,]))))
+      #     minnks <- min(minks)
+      #   }
+
+      #   nks_unobs <- table(res$partition)
+      #   pis_unobs <- nks_unobs / n
+      #   mus_unobs <- res$centers
+      #   for (k in 1:(K - M)) {
+      #     Sigmas_unobs[,,k] <- cov(y_unobs[res$partition==k,], use = "pairwise.complete.obs")
+      #     Sigmas_unobs[,,k]  <- Sigmas_unobs[,,k] + 1e-3 * diag(p)
+      #   }
+      # } else {
+      #   # if K == M, we don't need to consider the unobserved cases for initialization
+      #   nks_unobs <- NULL
+      #   pis_unobs <- NULL
+      #   mus_unobs <- NULL
+      # }
+
+      # # combine results
+      # for (k in 1:K) {
+      #   if (k <= M)
+      #     Sigmas[, , k] <- Sigmas_obs[, , k]
+      #   else
+      #     Sigmas[, , k] <- Sigmas_unobs[, , k - M]
+      # }
+
+      # mus <- rbind(mus_obs, mus_unobs)
+      # nks <- c(nks_unobs, nks_obs)
+      # pis <- c(pis_unobs, pis_obs)
+      # ------- end old code -------------------------------------------------------------------------------------------
     }
 
     else if (!old.inits) {
