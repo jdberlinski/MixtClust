@@ -18,8 +18,9 @@
 #' @param convergence Either \code{"lop"} specifying use of relative change
 #'   in loglikelihood as the convergence criterion, or \code{"aitkens"} specifying
 #'   Aitken's acceleration (default).
-#' @param sigma.constr Character specifying constrains on dispersion matrices
-#'   for each group. See details for further explanation.
+#' @param sigma.constr Character vector specifying constraints on dispersion matrices
+#'   for each group. See details for further explanation. If \code{sigma.constr = "all"},
+#'   all of the constriants will be run.
 #' @param df.constr Logical. Should the degrees of freedom \eqn{\nu_k} be held
 #'   constant over \eqn{k = 1,\dots,K} all clusters?
 #' @param approx.df Logical. If \code{approx.df = TRUE}, a numerical
@@ -165,8 +166,48 @@ MixtClust <- function(x,
   if (is.null(x))
     stop('No data was supplied!')
 
+  # allow for selecting multiple constraints here
   valid_constr <- c("VVV", "EEE", "VII", "EII", "EEI", "VVI", "EVI",
                     "EVV", "VEE", "VEV", "VEI", "EVE", "EEV", "VVE")
+
+  if (sigma.constr[[1]] == "all") {
+    sigma.constr <- valid_constr
+  }
+  if (length(sigma.constr) > 1) {
+    sigma.constr <- unique(sigma.constr) # in case of dupes
+    if (!all(sigma.constr %in% valid_constr)) {
+      bad_inds <- which(!(sigma.constr %in% valid_constr))
+
+      stop(paste0("Invalid constraint found in sigma.constr at indices ",
+          paste0(bad_inds, collapse = ", ")))
+    }
+
+    full_result <- Map(
+      function(cnstr) {
+        MixtClust(
+          x = x,
+          initial.values = initial.values,
+          nclusters = nclusters,
+          max.iter = max.iter,
+          tol = tol,
+          convergence = convergence,
+          sigma.constr = cnstr,
+          df.constr = df.constr,
+          approx.df = approx.df,
+          method = method,
+          verbose = verbose,
+          scaled = scaled,
+          labels = labels,
+          emEM.args = emEM.args
+        )
+      },
+      sigma.constr
+    )
+
+    names(full_result) <- sigma.constr
+    return(full_result)
+  }
+
   if (is.character(sigma.constr))
     sigma.constr <- toupper(sigma.constr)
   if (!(sigma.constr %in% valid_constr)) {

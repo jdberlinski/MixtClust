@@ -44,8 +44,9 @@ allowed.}
 in loglikelihood as the convergence criterion, or \code{"aitkens"} specifying
 Aitken's acceleration (default).}
 
-\item{sigma.constr}{Character specifying constrains on dispersion matrices
-for each group. See details for further explanation.}
+\item{sigma.constr}{Character vector specifying constraints on dispersion matrices
+for each group. See details for further explanation. If \code{sigma.constr = "all"},
+all of the constriants will be run.}
 
 \item{df.constr}{Logical. Should the degrees of freedom \eqn{\nu_k} be held
 constant over \eqn{k = 1,\dots,K} all clusters?}
