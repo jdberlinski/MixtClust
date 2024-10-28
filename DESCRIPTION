@@ -20,5 +20,5 @@ Imports:
     stats
 Suggests: testthat
 LinkingTo: Rcpp, RcppArmadillo, RcppGSL
-RoxygenNote: 7.2.1
+RoxygenNote: 7.3.1
 Encoding: UTF-8

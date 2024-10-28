@@ -17,7 +17,9 @@ MixtClust(
   method = "marginalization",
   verbose = TRUE,
   scaled = FALSE,
-  emEM.args = list(nstarts = sqrt(nclusters * prod(dim(x))), em.iter = 1, nbest = 10)
+  labels = rep(NA, nrow(x)),
+  emEM.args = list(nstarts = round(sqrt(nclusters * prod(dim(x)))), em.iter = 1, nbest =
+    10)
 )
 }
 \arguments{
@@ -61,6 +63,9 @@ freedom \eqn{\nu_k} for \eqn{k = 1,\dots,K}.}
 screen?}
 
 \item{scaled}{Logical variable that indicates if computations for multi-dimensional datasets should be done after scaling the dataset. Note that the resulting parameters are scaled back and so should not theoretically have much effect on the performance, except to potentially offer stability in numerical computations.}
+
+\item{labels}{Numeric vector of size \eqn{n} which contains the known labels for the data, to be used in semi-supervised
+clustering. Labels of unknown observations should be \code{"NA"}.}
 
 \item{emEM.args}{A named list of options utilized if \code{initial.values =
 "emEM"} (see details).}
@@ -154,9 +159,8 @@ plot(BICs ~ Ks, pch = 20, xlab = 'Number of Clusters', ylab = 'BIC')
 
 }
 \references{
-Emily Goren & Ranjan Maitra, 2021.
-"Model-based clustering of partial records," arXiv:2103.16336.
-https://arxiv.org/abs/2103.16336
+Goren, E. M., & Maitra, R. (2022). Fast model-based clustering of
+partial records. Stat, 11(1), e416. https://doi.org/10.1002/sta4.416
 
 Ranjan Maitra, 2009. "Initializing optimization partitioning algorithms," ACM/IEEE Transactions on Computational Biology and Bioinformatics, 6:1:144–157.
 

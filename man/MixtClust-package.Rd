@@ -3,7 +3,6 @@
 \docType{package}
 \name{MixtClust-package}
 \alias{MixtClust-package}
-\alias{_PACKAGE}
 \title{MixtClust: Robust Clustering for Complete and Incomplete Data}
 \description{
 Model-based clustering using finite mixtures of t distributions, with handling of incomplete data using either marginalization or the EM algorithm.

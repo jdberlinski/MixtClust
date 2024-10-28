@@ -79,9 +79,8 @@
 #' "VEI", "EVI", and "EEI", where the "I" indicates the corresponding component
 #' is an identity matrix of appropriate dimensions.
 #'
-#' @references Emily Goren & Ranjan Maitra, 2021.
-#' "Model-based clustering of partial records," arXiv:2103.16336.
-#' https://arxiv.org/abs/2103.16336
+#' @references Goren, E. M., & Maitra, R. (2022). Fast model-based clustering of
+#' partial records. Stat, 11(1), e416. https://doi.org/10.1002/sta4.416
 #'
 #' Ranjan Maitra, 2009. "Initializing optimization partitioning algorithms," ACM/IEEE Transactions on Computational Biology and Bioinformatics, 6:1:144–157.
 #'
