@@ -10,8 +10,10 @@
 #'   \code{"kmeans"} specifiying use of kmeans to generate an initial partition,
 #'   a vector of integers specifying an initial partition,
 #'   or a named list of initial parameter values (see details).
-#' @param nclusters Positive integer. The assumed number of clusters if initial
-#'   values are not provided.
+#' @param nclusters Positive integer vector. The assumed number of clusters if initial
+#'   values are not provided. If \code{length(nclusters) > 1}, then the
+#'   algorithm will be run on all supplied values, returning each result in a
+#'   list.
 #' @param max.iter Positive integer. The maximum number of EM iterations
 #'   allowed.
 #' @param tol Positive scalar. The desired stopping criterion value.
@@ -166,6 +168,7 @@ MixtClust <- function(x,
   if (is.null(x))
     stop('No data was supplied!')
 
+
   # allow for selecting multiple constraints here
   valid_constr <- c("VVV", "EEE", "VII", "EII", "EEI", "VVI", "EVI",
                     "EVV", "VEE", "VEV", "VEI", "EVE", "EEV", "VVE")
@@ -225,6 +228,43 @@ MixtClust <- function(x,
   if (length(labels) != nrow(x))
     stop("length of `labels` does not match number of rows in data")
 
+  # allow for multiple values of 'nclusters'
+
+  # if nclusters > 1, then emEM.args will be broken from the defaults, so we
+  # actually have to reassign it for now
+  # TODO: find a fix for this?
+
+  if (length(nclusters) > 1) {
+    full_result <- Map(
+      function(curr_nclusters) {
+
+        # in this case we are assuming the user didn't input a value
+        # for emEM.args
+        if (length(emEM.args$nstarts) > 1) {
+          emEM.args$nstarts <- round(sqrt(curr_nclusters*prod(dim(x))))
+        }
+
+        MixtClust(
+          x = x,
+          initial.values = initial.values,
+          nclusters = curr_nclusters,
+          max.iter = max.iter,
+          tol = tol,
+          convergence = convergence,
+          sigma.constr = sigma.constr,
+          df.constr = df.constr,
+          approx.df = approx.df,
+          method = method,
+          verbose = verbose,
+          scaled = scaled,
+          labels = labels,
+          emEM.args = emEM.args
+        )
+      },
+      nclusters
+    )
+    return(full_result)
+  }
 
 
   #######################################################
@@ -457,5 +497,6 @@ MixtClust <- function(x,
   o$npar <- npar
   o$sigma.constr <- sigma.constr
   o$nclusters <- nclusters
+  class(o) <- "MixtClust"
   o
 }

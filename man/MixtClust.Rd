@@ -32,8 +32,10 @@ initialization strategy (see \code{emEM.args} for additional arguments),
 a vector of integers specifying an initial partition,
 or a named list of initial parameter values (see details).}
 
-\item{nclusters}{Positive integer. The assumed number of clusters if initial
-values are not provided.}
+\item{nclusters}{Positive integer vector. The assumed number of clusters if initial
+values are not provided. If \code{length(nclusters) > 1}, then the
+algorithm will be run on all supplied values, returning each result in a
+list.}
 
 \item{max.iter}{Positive integer. The maximum number of EM iterations
 allowed.}
