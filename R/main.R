@@ -456,5 +456,6 @@ MixtClust <- function(x,
   o$call <- mf
   o$npar <- npar
   o$sigma.constr <- sigma.constr
+  o$nclusters <- nclusters
   o
 }
