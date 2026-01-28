@@ -1,3 +1,7 @@
+<!-- badges: start -->
+[![R-CMD-check](https://github.com/jdberlinski/MixtClust/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/jdberlinski/MixtClust/actions/workflows/R-CMD-check.yaml)
+<!-- badges: end -->
+
 # MixtClust
 Fast model-based Clustering with t-mixtures for complete and incomplete data
 
