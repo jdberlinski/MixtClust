@@ -11,7 +11,7 @@ classify(newobs, params)
 (dimensions), and missing entries set to \code{NA}.}
 
 \item{params}{A list of parmaters defining a finite mixture of
-multivariate t distributions, 
+multivariate t distributions,
 usually obtained from \code{\link{MixtClust}} (see details).}
 }
 \value{
@@ -25,15 +25,15 @@ t distributions.
 \details{
 Classify new observations according to the finite mixture of t distirbutions
 specified by the parameter values in \eqn{params}, a named list with elements:
-\itemize{ 
+\describe{
   \item{"pi"}{Mixing proportions. A vector of length \eqn{K} that
-sums to one.} 
+sums to one.}
   \item{"nu"}{Degrees of freedom. A vector of length \eqn{K} with
 entries at least equal to three (thus requiring the existance of the first
-two moments.)} 
+two moments.)}
   \item{"mu"}{Locations. A \eqn{K \times p} matrix, where the
 \eqn{k}-th row is the location \eqn{\mu_k \in R^p} for cluster
-\eqn{k}.} 
+\eqn{k}.}
   \item{"Sigma"}{Dispersions. A \eqn{p \times p \times K} array, where
 the \eqn{k}-th slice is the \eqn{p \times p} positive-definite disperion
 matrix \eqn{\Sigma_k} for cluster \eqn{k}.} }

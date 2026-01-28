@@ -22,7 +22,7 @@ extract_bic <- function(res) {
     function(constr_res) {
       df_inner <- Map(
         function(nc_res) {
-          if (class(nc_res) != "MixtClust")
+          if (!is(nc_res, "MixtClust"))
             stop("Results must be output from `MixtClust()`")
 
           data.frame(

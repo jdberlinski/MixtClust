@@ -19,7 +19,7 @@ in perfect agreement. Under random classification, the adjusted Rand Index is 0.
 Adjusted Rand Index
 }
 \details{
-Compute the adjusted Rand Index comparing the two 
+Compute the adjusted Rand Index comparing the two
 classifications, \code{class1} and \code{class2}.
 }
 \references{

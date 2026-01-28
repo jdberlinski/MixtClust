@@ -101,13 +101,27 @@ get.init.val <- function(X, R, K, df.constr, sigma.constr, init = "smart-random"
       min_nk <- 0
       full_init_labels <- rep(NA, n)
       full_init_labels[labeled_obs] <- obs_class
+
+      nk_iter <- 0
+
       while (min_nk <= p) {
         mus <- get_init_centers(y_unobs, mus, M)
-        unobs_labels <- as.numeric(assign_initial_partitions(y_unobs, mus) + 1)
-        full_init_labels[!labeled_obs] <- unobs_labels
+
+        if (nk_iter < 100) {
+          unobs_labels <- as.numeric(assign_initial_partitions(y_unobs, mus) + 1)
+          full_init_labels[!labeled_obs] <- unobs_labels
+        } else {
+          unobs_labels <- sample(1:K, size = sum(!labeled_obs), replace = TRUE)
+          full_init_labels[!labeled_obs] <- unobs_labels
+        }
 
         min_nks <- sapply(1:K, function(x) min(crossprod(!R[full_init_labels == x , ])))
         min_nk <- min(min_nks)
+
+        nk_iter <- nk_iter + 1
+        if (nk_iter == 100)
+          warning("Couldn't find optimal starting values in 100 tries. Falling back to random assignment.")
+
       }
 
       # update required values
@@ -208,7 +222,7 @@ get.init.val <- function(X, R, K, df.constr, sigma.constr, init = "smart-random"
         if (K == 1) {
             Sigmas[,,1]  <- cov(y, use = "pairwise.complete.obs")
             pis <- 1
-            mus <- matrix(colMeans(y,na.rm=T), nrow = 1)
+            mus <- matrix(colMeans(y,na.rm=TRUE), nrow = 1)
         } else {
             minnks <- 0
             while (minnks <= p) {
@@ -295,7 +309,24 @@ run.EM <- function(init, nclusters, X, miss.grp, A, Ru, ps, max.iter, tol, conve
     LLs <- c(sum(log(rowSums(initL))), rep(NA, max.iter)) # Store loglikelihood at each iteration.
     while (del > tol) {
         iter <- iter + 1
-        new <- EM_iter(old, X, A, Ru, miss.grp, ps, sigma.constr, df.constr, approx.df, marginalization, labeled_obs, class_indicators)
+    # TODO: Here
+        # new <- EM_iter(old, X, A, Ru, miss.grp, ps, sigma.constr, df.constr, approx.df, marginalization, labeled_obs, class_indicators)
+        tryCatch(
+          {new <- EM_iter(old, X, A, Ru, miss.grp, ps, sigma.constr, df.constr, approx.df, marginalization, labeled_obs, class_indicators)},
+          error = function(e) {
+            warning("Error in EM step, terminating run.")
+            LLs[iter + 1] <- -Inf
+            return(
+              list(
+                estimates = new,
+                iterations = iter,
+                Zs = matrix(0, nrow = nrow(X), ncol = nclusters),
+                loglik = LLs[2:(iter+1)],
+                bic = -Inf
+              )
+            )
+          }
+        )
         newL <- sapply(1:nclusters, function(k) {new$pi[k] * h(X, new$mu[k,], new$Sigma[,,k], new$nu[k], miss.grp, Ru)})
         newLLn <- sum(log(rowSums(newL)))
         ##    cat("ITER =", iter, "newLLn" = newLLn, "\n")

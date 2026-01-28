@@ -3,15 +3,15 @@ Type: Package
 Title: Robust Clustering for Complete and Incomplete Data
 Version: 0.2.0
 Date: 2022-11-04
-Author: Emily Goren [aut, cre], Ranjan Maitra [aut], Joshua Berlinski [aut]
-Maintainer: Emily Goren <emily.goren@gmail.com>
+Author: Emily Goren [aut], Ranjan Maitra [aut], Joshua Berlinski [aut, cre]
+Maintainer: Josh Berlinski <jdberlinski@gmail.com>
 Authors@R: c(person("Emily", "Goren", email = "emily.goren@gmail.com",
-                  role = c("aut", "cre")),
+                  role = c("aut")),
            person("Ranjan", "Maitra", email = "maitra@iastate.edu",
                   role = c("aut")),
-           person("Joshua", "Berlinski", email = "jberlin@iastate.edu",
-                  role = c("aut")))
-Description: Model-based clustering using finite mixtures of t distributions, with handling of incomplete data using either marginalization or the EM algorithm.
+           person("Josh", "Berlinski", email = "jdberlinski@gmail.com",
+                  role = c("aut", "cre")))
+Description: Model-based clustering using finite mixtures of t distributions, with handling of incomplete data using either marginalization or the EM algorithm. Pre-labeled data may be included in the form of class labels to use semi-supervised learning. For more details and performance evaluations, see Goren and Maitra (2022) <doi:10.1002/sta4.416> and Berlinski and Maitra (2025) <doi:10.1002/sam.70054>.
 License: GPL (>= 2)
 Imports:
     kmmeans,
@@ -20,5 +20,5 @@ Imports:
     stats
 Suggests: testthat
 LinkingTo: Rcpp, RcppArmadillo, RcppGSL
-RoxygenNote: 7.3.1
+RoxygenNote: 7.3.2
 Encoding: UTF-8

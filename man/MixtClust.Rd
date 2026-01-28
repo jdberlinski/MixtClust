@@ -74,7 +74,7 @@ clustering. Labels of unknown observations should be \code{"NA"}.}
 "emEM"} (see details).}
 }
 \value{
-A list containing: \itemize{ \item{"estimates"}{ A list of the final
+A list containing: \describe{ \item{"estimates"}{ A list of the final
   estimates "pi", "nu", "mu", and "Sigma" containing the MLEs for the mixing
   proportions, degrees of freedom, locations, and dispersions, respectively.}
   \item{"iterations"}{ Number of EM iterations performed (long EM run only;
@@ -91,7 +91,7 @@ A list containing: \itemize{ \item{"estimates"}{ A list of the final
   the final fitted model.} \item{"EM.time"}{ Runtime for the long EM run(s).}
   \item{"em.time"}{ Runtime for the short em run(s) when \code{initial.values
   = "emEM"}.} \item{"total.time"}{ Runtime for the entire function call.}
-  \item{"call"}{ Supplied function call.} \code{npar}{The number of model parameters.}}
+  \item{"call"}{ Supplied function call.} \item{"npar"}{The number of model parameters.}}
 }
 \description{
 Clustering using finite mixture of multivariate t distributions
@@ -103,7 +103,7 @@ Robust clustering, including handling of incomplete data, using the EM algorithm
 \details{
 Model-based clustering using finite mixtures of t distributions, with
 handling of incomplete data using either marginalization or the EM algorithm.
-If supplying initial values, format as a named list with elements: \itemize{
+If supplying initial values, format as a named list with elements: \describe{
 \item{"pi"}{ Mixing proportions. A vector of length \eqn{K} that sums to
 one.} \item{"nu"}{ Degrees of freedom. A vector of length \eqn{K} with
 entries at least equal to three (thus requiring the existance of the first
@@ -113,7 +113,7 @@ two moments.)} \item{"mu"}{ Locations. A \eqn{K \times p} matrix, where the
 \eqn{k}-th slice is the \eqn{p \times p} positive-definite dispersion matrix
 \eqn{\Sigma_k} for cluster \eqn{k}.} }
 
-The arguments for emEM specified in the list \code{emEM.args} are: \itemize{
+The arguments for emEM specified in the list \code{emEM.args} are: \describe{
 \item{"nstarts"}{ Positive integer. The number of randomly generated initial
 starting parameter values under consideration.} \item{"em.iter"}{ Positive
 integer. The number of short EM iterations to be performed on each set of
@@ -174,4 +174,6 @@ information," Computational Statistics, 24(3): 375-392.
 }
 \author{
 Emily Goren, \email{emily.goren@gmail.com}
+
+Josh Berlinski
 }

@@ -5,15 +5,15 @@
 \alias{MixtClust-package}
 \title{MixtClust: Robust Clustering for Complete and Incomplete Data}
 \description{
-Model-based clustering using finite mixtures of t distributions, with handling of incomplete data using either marginalization or the EM algorithm.
+Model-based clustering using finite mixtures of t distributions, with handling of incomplete data using either marginalization or the EM algorithm. Pre-labeled data may be included in the form of class labels to use semi-supervised learning. For more details and performance evaluations, see Goren and Maitra (2022) \doi{10.1002/sta4.416} and Berlinski and Maitra (2025) \doi{10.1002/sam.70054}.
 }
 \author{
-\strong{Maintainer}: Emily Goren \email{emily.goren@gmail.com}
+\strong{Maintainer}: Josh Berlinski \email{jdberlinski@gmail.com}
 
 Authors:
 \itemize{
+  \item Emily Goren \email{emily.goren@gmail.com}
   \item Ranjan Maitra \email{maitra@iastate.edu}
-  \item Joshua Berlinski \email{jberlin@iastate.edu}
 }
 
 }

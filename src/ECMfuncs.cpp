@@ -29,7 +29,9 @@ arma::mat fix_var(arma::mat sigma, double tol = 1e-3) {
   int p = sigma.n_rows;
   arma::mat eigvec(p,p), ans(p,p);
   arma::vec eigval(p), failures(p); failures.zeros();
-  arma::eig_sym(eigval, eigvec, sigma);
+  // TODO: here>>
+  // sigma = arma::symmatu(sigma);
+  arma::eig_sym(eigval, eigvec, arma::symmatu(sigma));
   double counter = 0.0;
   for (int j=0; j<p; j++) {
     bool fails = ((eigval(j) / eigval(p-1)) < tol);
@@ -48,7 +50,7 @@ arma::mat fix_var(arma::mat sigma, double tol = 1e-3) {
   } else {
     ans = sigma;
   }
-  return ans;
+  return arma::symmatu(ans);
 }
 
 
@@ -87,9 +89,11 @@ arma::vec mahalanobis(arma::mat x, arma::vec mu, arma::mat sigma, bool ischol = 
   // Cholesky decomp of covariance matrix -- take lower triangle.
   int n = x.n_rows, p = x.n_cols;
   arma::mat A(p,p);
+  // TODO: here>>
+  // sigma = arma::symmatu(sigma);
   if (!ischol) {
     arma::mat Atmp(p,p);
-    bool success = arma::chol(Atmp, sigma);
+    bool success = arma::chol(Atmp, arma::symmatu(sigma));
     if (!success) {
       Atmp = arma::chol(fix_var(sigma));
     }
@@ -148,8 +152,10 @@ arma::vec dMVT(arma::mat x, arma::vec mu, arma::mat sigma, double nu, bool logan
   }
   int p = x.n_cols, n = x.n_rows;
   arma::mat A(p,p);
+  // TODO: here>>
+  // sigma = arma::symmatu(sigma);
   if (!ischol) {
-    bool success = arma::chol(A, sigma);
+    bool success = arma::chol(A, arma::symmatu(sigma));
     if (!success) {
       A = arma::chol(fix_var(sigma));
     }
@@ -211,9 +217,12 @@ arma::vec h(arma::mat x, arma::vec mu, arma::mat sigma, double nu, arma::vec grp
     arma::vec mug = mu.elem(oidx);
     arma::mat sigmag = sigma.submat(oidx, oidx);
     arma::mat Rg(pg,pg);
-    bool success = arma::chol(Rg, sigmag);
+    // TODO: here>>
+    // sigmag = arma::symmatu(sigmag);
+    bool success = arma::chol(Rg, arma::symmatu(sigmag));
     if (!success) {
-      Rg = arma::chol(fix_var(sigmag));
+      arma::chol(Rg, fix_var(sigmag));
+      // Rg = arma::chol(fix_var(sigmag));
     }
     // get obs for this missingness pattern
     arma::uvec gidx = arma::find(grp == g);
@@ -270,7 +279,9 @@ arma::mat up_W(arma::mat x, arma::mat mus, NumericVector sigmas, arma::vec nus, 
       arma::vec mukg = muk.elem(oidx);
       arma::mat sigmakg = sigmak.submat(oidx, oidx);
       arma::mat Rkg(pg,pg);
-      bool success = arma::chol(Rkg, sigmakg);
+      // TODO: here>>
+      // sigmakg = arma::symmatu(sigmakg);
+      bool success = arma::chol(Rkg, arma::symmatu(sigmakg));
       if (!success) {
         Rkg = arma::chol(fix_var(sigmakg));
       }
@@ -304,6 +315,7 @@ arma::vec up_pi(arma::mat z) {
 arma::mat up_mu(arma::mat x, arma::mat z, arma::mat w, arma::mat A) {
   int p = x.n_cols, n = x.n_rows, K = z.n_cols;
   arma::mat ans(K, p);
+  double r;
   for (int k=0; k<K; k++) {
     arma::mat L(p,p); L.zeros();
     arma::vec R(p); R.zeros();
@@ -312,6 +324,15 @@ arma::mat up_mu(arma::mat x, arma::mat z, arma::mat w, arma::mat A) {
       L += z(i,k) * w(i,k) * dA;
       R += z(i,k) * w(i,k) * dA * x.row(i).t();
     }
+
+    // Sometimes L is computationally singular.
+    // Generally these are bad solutions and will be outperformed by better
+    // ones, but this approximation supresses some of the warnings that come up
+    r = arma::rcond(L);
+    if (r < 1e-16)
+      L += 1e-3 * arma::eye(p, p);
+
+
     ans.row(k) = arma::solve(L, R).t();
   }
   return ans;
@@ -468,7 +489,7 @@ arma::cube up_Sigma(arma::mat x, arma::mat z, arma::mat w, arma::mat mus, arma::
     }
 
     for (int k = 0; k < K; k++) {
-      Sigmas.slice(k) = zeta * Sigmas.slice(k) / R;
+      Sigmas.slice(k) = arma::symmatu(zeta * Sigmas.slice(k) / R);
     }
   }
   // constraints with iterative solutions
@@ -1701,7 +1722,9 @@ double Q2(arma::mat x, arma::mat z, arma::mat w, NumericVector sigmas, arma::mat
       arma::vec mukg = muk.elem(oidx);
       arma::mat sigmakg = sigmak.submat(oidx, oidx);
       arma::mat Rkg(pg,pg);
-      bool success = arma::chol(Rkg, sigmakg);
+      // TODO: here>>
+      // sigmakg = arma::symmatu(sigmakg);
+      bool success = arma::chol(Rkg, arma::symmatu(sigmakg));
       if (!success) {
         Rkg = arma::chol(fix_var(sigmakg));
       }
